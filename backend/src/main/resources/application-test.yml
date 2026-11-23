@@ -8,3 +8,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+
+app:
+  jwt:
+    # Secreto SOLO de tests (no sensible, >= 32 bytes). Produccion y dev: JWT_SECRET por entorno.
+    secret: test-only-jwt-secret-not-for-production-0123456789
+    expiration-min: 30

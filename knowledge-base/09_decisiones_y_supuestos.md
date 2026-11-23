@@ -12,7 +12,7 @@
 **Decisión**: frontend TypeScript vanilla; backend Spring Boot (REST, Gradle, Hibernate/JPA) y MySQL. **Origen**: usuario. **Trade-offs**: el frontend sin framework exige disciplina de módulos y cuidado con XSS.
 
 ### DD-04 — Mecanismo de autenticación
-**Decisión provisional**: JWT en header (o cookie HttpOnly); definir en el diseño. **Estado**: abierta (PA-10).
+**Decisión** (2026-11-23, C-03): JWT HS256 en header `Authorization: Bearer`, sin refresh en el MVP (access token de `JWT_EXPIRATION_MIN` = 30 min), validado con Spring Security OAuth2 Resource Server. Cookie HttpOnly y refresh rotativo quedan post-MVP. **Estado**: resuelta para el MVP (PA-10).
 
 ### DD-05 — Migraciones con Flyway (sugerido)
 **Decisión provisional**: versionar el esquema con Flyway en lugar de `ddl-auto`. **Justificación**: reproducibilidad entre 5 integrantes.
