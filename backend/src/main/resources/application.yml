@@ -8,6 +8,17 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+    # Regla 5: ni SQL ni parametros en logs, en ningun perfil.
+    show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        type:
+          preferred_instant_jdbc_type: TIMESTAMP
+        query:
+          # @Immutable (audit_log): un UPDATE/DELETE HQL sobre la entidad lanza excepcion.
+          immutable_entity_update_query_handling_mode: exception
   flyway:
     locations: classpath:db/migration
   mail:
@@ -15,6 +26,11 @@ spring:
     port: ${SMTP_PORT:}
     username: ${SMTP_USER:}
     password: ${SMTP_PASSWORD:}
+
+logging:
+  level:
+    # Nunca TRACE: volcaria los parametros enlazados (PII / datos de salud).
+    org.hibernate.orm.jdbc.bind: WARN
 
 server:
   port: 8080
@@ -26,3 +42,7 @@ app:
   jwt:
     secret: ${JWT_SECRET:}
     expiration-min: ${JWT_EXPIRATION_MIN:30}
+  # Admin del seed de desarrollo (solo perfil dev). Sin default para la contrasena: si falta, no se crea.
+  dev-admin:
+    email: ${DEV_ADMIN_EMAIL:admin@dev.local}
+    password: ${DEV_ADMIN_PASSWORD:}

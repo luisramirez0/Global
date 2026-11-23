@@ -147,7 +147,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/09_decisiones_y_supuestos.md`
 
 ### [C-02] `core-data-model`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (pendiente de merge del PR) — evidencia: backend 189/189 y frontend 9/9 con `bash scripts/test.sh`; aislamiento A/B en los 13 repositorios tenant-scoped; V1/V2 aplican en H2 `MODE=MySQL` y en MySQL 8 (verificación manual de Luis, 2026-11-23: 15 repositorios, seed id=1, /api/health UP). Handoff: `knowledge-base/entrega/C-02.md`
 - **Resultado**: las migraciones aplican limpias sobre MySQL y los repositorios aíslan datos por `consultorio_id` (test de aislamiento en verde).
 - **Scope**:
   - Migración 001 (Flyway): `consultorio`, `usuario`, `profesional`, `sillon`, `prestacion`, `horario_atencion`, `bloqueo_agenda` con `consultorio_id`, `created_at`, `updated_at`.
