@@ -1,0 +1,21 @@
+# Built from the Zona of each ficha in CHANGES.md and the risk reviewers.
+# Format: <path> @primary-reviewer @backup-reviewer
+# Members without a `github` handle are left out and noted in the summary.
+# PENDIENTE: ningún integrante tiene cuenta de GitHub cargada todavía
+# (revisor principal: integrante-1, suplente: integrante-2).
+# Completar con /active-orchestrator team y descomentar las líneas.
+# El paquete Java base es `ar.global.odonto` (fijado en C-01 project-setup, DD-10).
+# backend/src/main/java/**/security/ @primary @backup
+# backend/src/main/java/**/auditoria/ @primary @backup
+# backend/src/main/java/**/paciente/ficha/ @primary @backup
+# backend/src/main/java/**/paciente/export/ @primary @backup
+# backend/src/main/java/**/usuario/ @primary @backup
+# backend/src/main/java/**/consultorio/ @primary @backup
+# backend/src/main/java/**/agenda/ @primary @backup
+# backend/src/main/java/**/paciente/ @primary @backup
+# backend/src/main/java/**/recordatorio/ @primary @backup
+# backend/src/main/java/**/config/ @primary @backup
+# backend/src/main/resources/db/migration/ @primary @backup
+# backend/build.gradle* @primary @backup
+# frontend/ @primary @backup
+# docker-compose.yml @primary @backup

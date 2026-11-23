@@ -1,0 +1,22 @@
+# >>> active-stack:team-mode
+.active-stack/team.local.json
+.active-stack/me.local.json
+# <<< active-stack:team-mode
+
+# skill registry (local)
+.atl/
+
+# backups del orquestador
+.active-orchestrator-state.json.bak*
+
+# entorno local y artefactos de build (C-01)
+.env
+!.env.example
+backend/build/
+backend/.gradle/
+frontend/node_modules/
+frontend/dist/
+coverage/
+.idea/
+.vscode/
+*.iml

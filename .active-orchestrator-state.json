@@ -1,0 +1,393 @@
+{
+  "version": 5,
+  "step": "done",
+  "owner": "active-orchestrator",
+  "foundation": {
+    "version": 1,
+    "approved_on": "2026-11-23",
+    "order": [
+      "discovery",
+      "kb",
+      "roadmap",
+      "task-management",
+      "team-mode",
+      "find-skill",
+      "registry",
+      "agents"
+    ],
+    "phases": {
+      "openspec-init": {
+        "variant": "cli",
+        "status": "done",
+        "requires": [],
+        "outputs": [
+          "openspec/"
+        ]
+      },
+      "discovery": {
+        "variant": "competitors",
+        "status": "done",
+        "requires": [],
+        "inputs": [
+          "docs/consigna.txt"
+        ],
+        "outputs": [
+          "discovery/discovery.md"
+        ]
+      },
+      "kb": {
+        "variant": "import+interview",
+        "status": "done",
+        "requires": [
+          "discovery"
+        ],
+        "outputs": [
+          "knowledge-base/"
+        ]
+      },
+      "visual-design": {
+        "variant": "deferred",
+        "status": "deferred",
+        "requires": [],
+        "outputs": [
+          "design-system/README.md"
+        ],
+        "decided_on": "2026-11-23"
+      },
+      "roadmap": {
+        "variant": "local-markdown",
+        "status": "done",
+        "requires": [
+          "kb"
+        ],
+        "outputs": [
+          "CHANGES.md"
+        ]
+      },
+      "task-management": {
+        "variant": "local",
+        "status": "done",
+        "requires": [
+          "roadmap"
+        ],
+        "outputs": [
+          ".active-stack/roadmap.json"
+        ],
+        "decided_on": "2026-11-23"
+      },
+      "team-mode": {
+        "variant": "new",
+        "status": "done",
+        "requires": [
+          "roadmap",
+          "task-management"
+        ],
+        "outputs": [
+          ".active-stack/team.json",
+          ".github/pull_request_template.md",
+          ".github/CODEOWNERS",
+          ".active-stack/team.local.json",
+          ".gitignore"
+        ],
+        "decided_on": "2026-11-23",
+        "main_protection": "not_offered_no_git_repo"
+      },
+      "memory-policy": {
+        "variant": "skipped",
+        "status": "skipped",
+        "requires": [],
+        "outputs": [],
+        "reason": "no es repo git"
+      },
+      "find-skill": {
+        "variant": "install-selected",
+        "status": "done",
+        "requires": [
+          "kb"
+        ],
+        "outputs": []
+      },
+      "registry": {
+        "variant": "index",
+        "status": "done",
+        "requires": [
+          "find-skill"
+        ],
+        "outputs": [
+          ".atl/skill-registry.md"
+        ]
+      },
+      "agents": {
+        "variant": "generate",
+        "status": "done",
+        "requires": [
+          "kb",
+          "roadmap",
+          "registry",
+          "team-mode"
+        ],
+        "outputs": [
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "discovery": {
+    "created_by": "discovery-research",
+    "sources": [
+      "https://dentalsoft.com.ar/",
+      "https://odonthia.com/",
+      "https://dentalcore.app/",
+      "https://agendapro.com/ar/dental/software-odontologico",
+      "https://web-es.softwaredentalink.com/",
+      "https://www.clinia.com.ar/odontologia",
+      "https://pro.docfav.com/es-ar",
+      "https://yo-facturo.com/clinicas/",
+      "https://www.doctocliq.com/",
+      "https://www.medesk.net/es/solutiones/odontologia"
+    ],
+    "competitors": [
+      {
+        "name": "DentalSoft",
+        "notes_file": "discovery/sources/dentalsoft.md"
+      },
+      {
+        "name": "Odonthia",
+        "notes_file": "discovery/sources/odonthia.md"
+      },
+      {
+        "name": "DentalCore",
+        "notes_file": "discovery/sources/dentalcore.md"
+      },
+      {
+        "name": "AgendaPro",
+        "notes_file": "discovery/sources/agendapro.md"
+      },
+      {
+        "name": "Dentalink",
+        "notes_file": "discovery/sources/dentalink.md"
+      },
+      {
+        "name": "ClinIA / OdontoClinIA",
+        "notes_file": "discovery/sources/clinia-odontoclinia.md"
+      },
+      {
+        "name": "Docfav",
+        "notes_file": "discovery/sources/docfav.md"
+      },
+      {
+        "name": "Doctocliq",
+        "notes_file": "discovery/sources/doctocliq.md"
+      },
+      {
+        "name": "YoFacturo",
+        "notes_file": "discovery/sources/yofacturo.md"
+      },
+      {
+        "name": "Medesk",
+        "notes_file": "discovery/sources/medesk.md"
+      }
+    ],
+    "problema": "Consultorios y clinicas odontologicas argentinas gestionan turnos de forma manual o con herramientas genericas (ausentismo, huecos, carga administrativa); ningun sistema evidencia publicamente agenda por sillon + lista de espera + sena Mercado Pago + ARCA + obras sociales a precio accesible. Hipotesis no validada con usuarios.",
+    "usuarios": [
+      "Odontologo independiente",
+      "Clinica con varios profesionales y sillones",
+      "Recepcionista",
+      "Paciente",
+      "Administrador/dueno de clinica"
+    ],
+    "casos_de_uso": [
+      "Reservar/confirmar/cancelar/reprogramar turno",
+      "Cubrir huecos desde lista de espera",
+      "Registrar ausentes y recall",
+      "Cobrar sena por Mercado Pago",
+      "Agenda diaria por profesional y sillon",
+      "Atender paciente con obra social"
+    ],
+    "funcionalidades_necesarias": [
+      "Agenda multi-profesional y multi-sillon con duracion variable, bloqueos, sobreturnos y prevencion de solapamientos",
+      "Ficha basica de paciente",
+      "Reserva online por enlace con confirmacion/cancelacion/reprogramacion",
+      "Recordatorios WhatsApp (API oficial) y email",
+      "Roles, auditoria y exportacion",
+      "Seguridad basica de datos de salud"
+    ],
+    "funcionalidades_opcionales": [
+      "Lista de espera con reasignacion de huecos",
+      "Sena Mercado Pago",
+      "Recall y seguimiento de ausentes",
+      "Odontograma/periodontograma",
+      "Presupuestos",
+      "Obras sociales",
+      "Facturacion ARCA",
+      "Portal del paciente",
+      "Firma electronica",
+      "IA en WhatsApp"
+    ],
+    "reglas_de_negocio": [
+      "Sin solapamiento por sillon/profesional; sobreturno explicito y auditado",
+      "Duracion segun prestacion",
+      "Politicas de cancelacion y sena configurables",
+      "Datos de salud sensibles (Ley 25.326), trazabilidad de accesos",
+      "Conservacion de HC segun Ley 26.529 (a verificar)"
+    ],
+    "integraciones": [
+      "WhatsApp Business API",
+      "Mercado Pago",
+      "Google Calendar",
+      "ARCA (etapa posterior)",
+      "PUCO/obras sociales (etapa posterior)",
+      "Email/SMS"
+    ],
+    "restricciones": [
+      "Costo por mensaje de WhatsApp (Meta)",
+      "Normativa argentina de datos y salud",
+      "Mantenimiento de nomencladores de obras sociales",
+      "Equipo/plazo/presupuesto a confirmar"
+    ],
+    "riesgos": [
+      "Dolor principal del segmento no validado con usuarios",
+      "Competidores con plan gratuito",
+      "Obras sociales desbordan el MVP",
+      "Cumplimiento legal de datos y firma",
+      "Dependencia de API de WhatsApp",
+      "Evidencia proveniente de marketing de proveedores"
+    ],
+    "preguntas_abiertas": [
+      "Segmento inicial y tamano",
+      "Acceso a odontologos para validar",
+      "Obras sociales en MVP",
+      "Facturacion ARCA en MVP",
+      "WhatsApp API oficial vs wa.me",
+      "Stack, equipo, plazo",
+      "Modelo comercial",
+      "Residencia de datos y responsable AAIP",
+      "Demos pendientes",
+      "Fuentes oficiales de Bilog/DentalTec/Odonto.ar/Dentidesk",
+      "Validacion legal de HC y firma"
+    ],
+    "systems_surveyed": 19,
+    "top5_weighted": [
+      "DentalCore 4.35",
+      "Dentalink 3.85",
+      "AgendaPro 3.77",
+      "DentalSoft 3.73",
+      "ClinIA 3.58"
+    ],
+    "sources_fetched_at": "2026-11-23",
+    "discovery_file": "discovery/discovery.md"
+  },
+  "kb": {
+    "created_by": "kb-creator",
+    "source": "ingest",
+    "discovery": {
+      "problem": "Consultorios odontologicos argentinos gestionan turnos manualmente (ausentismo, huecos, carga administrativa); hipotesis no validada con usuarios.",
+      "system_type": "saas_multi_tenant",
+      "domain": "dental_appointment_management",
+      "scale": "multi_tenant (MVP: odontologo independiente, 1-2 sillones; low confidence, ver 10_preguntas_abiertas)",
+      "stack": "TypeScript vanilla + Spring Boot (REST, Gradle, Hibernate/JPA) + MySQL",
+      "needs_infra": true
+    },
+    "files": [
+      "knowledge-base/01_vision_y_objetivos.md",
+      "knowledge-base/02_descripcion_general.md",
+      "knowledge-base/03_actores_y_roles.md",
+      "knowledge-base/04_modelo_de_datos.md",
+      "knowledge-base/05_reglas_de_negocio.md",
+      "knowledge-base/06_funcionalidades.md",
+      "knowledge-base/07_flujos_principales.md",
+      "knowledge-base/08_arquitectura_propuesta.md",
+      "knowledge-base/09_decisiones_y_supuestos.md",
+      "knowledge-base/10_preguntas_abiertas.md",
+      "knowledge-base/README.md"
+    ]
+  },
+  "skills": {
+    "recommended": [
+      "github/awesome-copilot@java-springboot",
+      "affaan-m/ecc@springboot-patterns",
+      "affaan-m/ecc@springboot-security",
+      "affaan-m/ecc@springboot-tdd",
+      "github/awesome-copilot@java-junit",
+      "giuseppe-trisciuoglio/developer-kit@spring-boot-security-jwt",
+      "pluginagentmarketplace/custom-plugin-java@java-jpa-hibernate",
+      "wshobson/agents@api-design-principles",
+      "wshobson/agents@javascript-testing-patterns",
+      "sentimony/skills@vitest",
+      "addyosmani/web-quality-skills@accessibility",
+      "addyosmani/agent-skills@git-workflow-and-versioning"
+    ],
+    "installed": [
+      "github/awesome-copilot@java-springboot",
+      "affaan-m/ecc@springboot-patterns",
+      "affaan-m/ecc@springboot-security",
+      "affaan-m/ecc@springboot-tdd",
+      "github/awesome-copilot@java-junit",
+      "giuseppe-trisciuoglio/developer-kit@spring-boot-security-jwt",
+      "pluginagentmarketplace/custom-plugin-java@java-jpa-hibernate",
+      "wshobson/agents@api-design-principles",
+      "wshobson/agents@javascript-testing-patterns",
+      "sentimony/skills@vitest",
+      "addyosmani/web-quality-skills@accessibility",
+      "addyosmani/agent-skills@git-workflow-and-versioning"
+    ],
+    "installed_on": "2026-11-23"
+  },
+  "roadmap": {
+    "created_by": "roadmap-generator",
+    "source": "CHANGES.md",
+    "changes_file": "CHANGES.md",
+    "changes": [
+      "C-01",
+      "C-02",
+      "C-03",
+      "C-04",
+      "C-05",
+      "C-06",
+      "C-07",
+      "C-08",
+      "C-09",
+      "C-10",
+      "C-11",
+      "C-12",
+      "C-13",
+      "C-14",
+      "C-15",
+      "C-16",
+      "C-17",
+      "C-18",
+      "C-19",
+      "C-20",
+      "C-21",
+      "C-22"
+    ]
+  },
+  "registry": {
+    "created_by": "skill-registry",
+    "file": ".atl/skill-registry.md",
+    "variant": "index",
+    "skills_indexed": 26,
+    "compact_rules_blocks": 26,
+    "recommended_not_installed": 0,
+    "moved_from_recommended": 12,
+    "testcontainers_policy": "not_applicable; integration tests use H2 (MySQL mode) per CLAUDE.md rule 8",
+    "project_conventions": [
+      "CLAUDE.md",
+      "knowledge-base/README.md",
+      "knowledge-base/01..10",
+      "CHANGES.md",
+      "discovery/discovery.md",
+      "openspec/"
+    ],
+    "generated_on": "2026-11-23",
+    "updated_on": "2026-11-23"
+  },
+  "agents": {
+    "created_by": "agent-instruction",
+    "files": [
+      "CLAUDE.md"
+    ],
+    "team_section": true,
+    "generated_on": "2026-11-23"
+  }
+}
