@@ -1,0 +1,116 @@
+/* Estilos mínimos y funcionales: el diseño definitivo queda para el design system (diferido). */
+
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+body {
+  margin: 0;
+}
+
+.saltar {
+  position: absolute;
+  left: -9999px;
+}
+
+.saltar:focus {
+  left: 1rem;
+  top: 1rem;
+  padding: 0.5rem 1rem;
+  background: #fff;
+  z-index: 10;
+}
+
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #0b4f6c;
+  color: #fff;
+}
+
+.encabezado p {
+  margin: 0;
+}
+
+.marca {
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.sesion {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+nav ul {
+  display: flex;
+  gap: 1rem;
+  margin: 0;
+  padding: 0.5rem 1.5rem;
+  list-style: none;
+  background: #e8f1f5;
+}
+
+main {
+  max-width: 40rem;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.campo input {
+  font: inherit;
+  padding: 0.5rem;
+  border: 1px solid #6b6b6b;
+  border-radius: 4px;
+}
+
+.campo input[aria-invalid='true'] {
+  border-color: #b00020;
+}
+
+.error-campo,
+.alerta {
+  margin: 0.25rem 0 0;
+  color: #b00020;
+}
+
+.alerta:empty,
+.error-campo:empty {
+  display: none;
+}
+
+.aviso {
+  padding: 0.5rem 1rem;
+  background: #fff4ce;
+  border-left: 4px solid #b58900;
+}
+
+button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+:focus-visible {
+  outline: 3px solid #f5a623;
+  outline-offset: 2px;
+}
