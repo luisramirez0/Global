@@ -40,5 +40,5 @@
 ## Workflow follow-up
 
 - [x] (parcial, 2026-11-23: registro y login OK contra la API real en Docker; vencimiento y 429 sin completar a mano, cubiertos por tests; ver handoff) Verificación manual de la persona contra la API real (`npm run dev` con el backend levantado por ella): registro, login, recarga con sesión, cierre de sesión, token vencido (con `JWT_EXPIRATION_MIN=1`), 429 tras 5 fallos, `409` por email duplicado.
-- PR único solo con autorización explícita, plantilla `.github/pull_request_template.md`, Conventional Commits y aviso a integrante-1/2 (zona de riesgo: manejo del token).
-- Archivar el change cuando el PR esté mergeado.
+- [x] (PR #5, merge `7814294`) PR único solo con autorización explícita, plantilla `.github/pull_request_template.md`, Conventional Commits y aviso a integrante-1/2 (zona de riesgo: manejo del token).
+- [x] Archivar el change cuando el PR esté mergeado (2026-11-23).

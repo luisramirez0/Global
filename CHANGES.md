@@ -294,7 +294,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
 > Riesgo XSS por ausencia de framework: prohibido `innerHTML` con datos de usuario en TODOS los changes de esta fase.
 
 ### [C-10] `frontend-shell-auth`
-- **Estado**: `[x]` completado (cerrado por la persona el 2026-11-23 con el alcance implementado) — rama `c-10-frontend-shell-auth`, change `openspec/changes/c-10-frontend-shell-auth`: `npm test` 210/210 (línea base 9), lint/typecheck/build limpios, sin cambios en `backend/` ni migraciones. Verificación manual contra la API real **parcial** (backend + MySQL 8 en Docker, health `UP`, CORS desde `:5173` OK; registro y login probados por la persona; no se completaron vencimiento ni 429). Pendiente: merge del PR y archivado. Recuperación de contraseña: fuera de alcance, propuesta como ficha nueva. Handoff: `knowledge-base/entrega/C-10.md`
+- **Estado**: `[x]` completado (cerrado por la persona el 2026-11-23 con el alcance implementado) — mergeado en PR #5 (merge `7814294`) y archivado en `openspec/changes/archive/2026-11-23-c-10-frontend-shell-auth`: `npm test` 210/210 (línea base 9), lint/typecheck/build limpios, sin cambios en `backend/` ni migraciones. Verificación manual contra la API real **parcial** (backend + MySQL 8 en Docker, health `UP`, CORS desde `:5173` OK; registro y login probados por la persona; no se completaron vencimiento ni 429). Recuperación de contraseña: fuera de alcance, propuesta como ficha nueva. Handoff: `knowledge-base/entrega/C-10.md`
 - **Resultado**: login/registro funcionales contra la API, rutas protegidas y cierre de sesión; cliente HTTP tipado reutilizable.
 - **Scope**:
   - `src/api/` cliente HTTP tipado (manejo 401/403/409/422, token según DD-04), `src/state/` sesión, router simple con guard, layout base.
