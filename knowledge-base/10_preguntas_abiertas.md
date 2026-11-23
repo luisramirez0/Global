@@ -36,7 +36,7 @@ Ver R-01.
 | PA-07 | Media | ¿La recepcionista ve la ficha clínica o solo datos administrativos? | RBAC | Product owner |
 | PA-08 | Media | Política de edición de notas clínicas (adenda vs edición) | Ficha | Product owner / legal |
 | PA-09 | Media | Hosting gratuito aceptable para la demo (local, Docker, free tier) | Entrega | Equipo técnico |
-| PA-10 | Media | JWT vs sesión por cookie | Seguridad | Equipo técnico |
+| PA-10 | Media | ~~JWT vs sesión por cookie~~ Resuelta 2026-11-23 (C-03): JWT Bearer sin refresh en el MVP, ver DD-04 | Seguridad | Equipo técnico |
 | PA-11 | Baja | Roles/estructura del equipo de 5 (frontend, backend, QA, etc.) | Reparto | Equipo |
 | PA-12 | Baja | Demos pendientes de competidores; fuentes de Bilog, DentalTec, Odonto.ar, Dentidesk | Posicionamiento | Equipo |
 | PA-13 | Baja | Obras sociales y ARCA: cuándo y cómo (etapa posterior) | Etapa 3 | Product owner |

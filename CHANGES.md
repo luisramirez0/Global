@@ -165,7 +165,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/08_arquitectura_propuesta.md` §Patrones
 
 ### [C-03] `auth-jwt-rbac`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (pendiente de merge del PR). Evidencia: backend 264/264 con `./gradlew test` (línea base 189; tests de registro, login, hash, expiración, firma alterada, rol insuficiente, rate limit y aislamiento A/B por token); verificación manual contra MySQL 8 por la persona (registro, login y /api/auth/me OK, 2026-11-23). Handoff: `knowledge-base/entrega/C-03.md`
 - **Resultado**: registro + login emiten token; rutas protegidas devuelven 401/403 según rol; contraseñas con hash; el acceso cruzado entre consultorios es rechazado.
 - **Scope**:
   - `POST /api/auth/register` (crea Consultorio + Usuario + Profesional + Sillón por defecto en una transacción; 409 email duplicado), `POST /api/auth/login` (401 credenciales inválidas), refresh según DD-04/PA-10.
