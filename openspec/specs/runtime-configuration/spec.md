@@ -78,3 +78,16 @@ En todos los perfiles la configuración MUST mantener desactivados el volcado de
 #### Scenario: Volcado de SQL desactivado
 - **WHEN** arranca la aplicación en cualquier perfil
 - **THEN** `spring.jpa.show-sql` es falso y el logger de parámetros enlazados de Hibernate no está en nivel `TRACE`
+
+### Requirement: Secreto JWT obligatorio y robusto
+El backend MUST negarse a arrancar si `JWT_SECRET` no está definida o tiene menos de 32 bytes, con un mensaje que nombra la variable sin mostrar su valor; `.env.example` MUST dejar `JWT_SECRET` vacía e indicar la longitud mínima, y el perfil `test` MAY definir un secreto de prueba no sensible.
+
+#### Scenario: Secreto ausente
+- **GIVEN** `JWT_SECRET` no está definida
+- **WHEN** arranca la aplicación
+- **THEN** el arranque falla con un mensaje que menciona `JWT_SECRET`
+
+#### Scenario: Secreto corto sin filtrarse
+- **GIVEN** `JWT_SECRET` vale `corto`
+- **WHEN** arranca la aplicación
+- **THEN** el arranque falla y el mensaje no contiene `corto`
