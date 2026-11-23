@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Restringe qué orígenes de navegador pueden consumir la API y establece que toda ruta no declarada pública queda denegada por defecto hasta que C-03 incorpore autenticación.
+Restringe qué orígenes de navegador pueden consumir la API y establece que toda ruta no declarada pública queda denegada por defecto (desde C-03, sin un token JWT válido).
 
 ## Requirements
 
@@ -31,12 +31,12 @@ La política CORS SHALL permitir los métodos `GET, POST, PUT, PATCH, DELETE, OP
 - **THEN** la respuesta autoriza ambos encabezados
 
 ### Requirement: Acceso denegado por defecto
-Toda ruta de la API que no esté declarada explícitamente como pública MUST ser rechazada para solicitudes sin credenciales válidas, y la API MUST ser stateless (sin sesión HTTP).
+Toda ruta de la API que no esté declarada explícitamente como pública MUST ser rechazada para solicitudes sin credenciales válidas, y la API MUST ser stateless (sin sesión HTTP). Las rutas públicas son `GET /api/health`, `POST /api/auth/register`, `POST /api/auth/login` y los preflight `OPTIONS`.
 
 #### Scenario: Ruta no pública sin credenciales
 - **WHEN** un cliente sin token envía `GET /api/cualquier-recurso`
-- **THEN** el backend responde `401` o `403` y no expone datos
+- **THEN** el backend responde `401` y no expone datos
 
 #### Scenario: Sin cookie de sesión
-- **WHEN** un cliente envía `GET /api/health`
+- **WHEN** un cliente envía `GET /api/health` o `POST /api/auth/login`
 - **THEN** la respuesta no establece una cookie de sesión (`JSESSIONID`)
