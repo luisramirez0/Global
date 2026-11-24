@@ -38,6 +38,11 @@ public class ApiCalls {
 				.content(json)).andReturn().getResponse();
 	}
 
+	public MockHttpServletResponse patch(String bearer, String url, String json) throws Exception {
+		return mockMvc.perform(MockMvcRequestBuilders.patch(url).header("Authorization", bearer).contentType(MediaType.APPLICATION_JSON)
+				.content(json)).andReturn().getResponse();
+	}
+
 	public MockHttpServletResponse delete(String bearer, String url) throws Exception {
 		return mockMvc.perform(MockMvcRequestBuilders.delete(url).header("Authorization", bearer)).andReturn().getResponse();
 	}

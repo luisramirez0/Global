@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import ar.global.odonto.agenda.turno.FueraDeAgendaException;
+import ar.global.odonto.agenda.turno.MotivoConflicto;
+import ar.global.odonto.agenda.turno.TurnoEnConflictoException;
 import ar.global.odonto.common.tenant.TenantNotSetException;
 import ar.global.odonto.consultorio.registro.EmailYaRegistradoException;
 import ar.global.odonto.paciente.abm.DatoInvalidoException;
@@ -15,11 +18,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -202,6 +207,54 @@ class ApiExceptionHandlerTest {
 		assertThat(response.getContentAsString()).doesNotContain("1985-13-99");
 	}
 
+	@Test
+	void turnoConflictIs409WithTheConflictingTurnoAndNoPatientData() throws Exception {
+		var response = mockMvc.perform(get("/t/turno-conflicto")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(409);
+		assertProblem(response);
+		JsonNode body = mapper.readTree(response.getContentAsString());
+		JsonNode conflicto = body.get("conflicto");
+		assertThat(conflicto.get("turnoId").asLong()).isEqualTo(31L);
+		assertThat(conflicto.get("inicio").asText()).isEqualTo("2026-12-07T13:00:00Z");
+		assertThat(conflicto.get("fin").asText()).isEqualTo("2026-12-07T13:30:00Z");
+		assertThat(conflicto.get("sillonId").asLong()).isEqualTo(3L);
+		assertThat(conflicto.get("profesionalId").asLong()).isEqualTo(4L);
+		assertThat(conflicto.get("motivo").asText()).isEqualTo("SILLON");
+		assertThat(conflicto.size()).isEqualTo(6);
+		assertThat(body.get("instance").asText()).isEqualTo("about:blank");
+	}
+
+	@Test
+	void outsideScheduleIs422OnInicioWithoutBlockId() throws Exception {
+		var response = mockMvc.perform(get("/t/fuera-de-horario")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(422);
+		assertProblem(response);
+		JsonNode body = mapper.readTree(response.getContentAsString());
+		assertThat(body.get("errores").findValuesAsText("campo")).containsExactly("inicio");
+		assertThat(body.has("bloqueoId")).isFalse();
+	}
+
+	@Test
+	void blockedSlotIs422OnInicioWithTheBlockId() throws Exception {
+		var response = mockMvc.perform(get("/t/en-bloqueo")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(422);
+		JsonNode body = mapper.readTree(response.getContentAsString());
+		assertThat(body.get("errores").findValuesAsText("campo")).containsExactly("inicio");
+		assertThat(body.get("bloqueoId").asLong()).isEqualTo(9L);
+	}
+
+	@Test
+	void optimisticLockFailureIs409Generic() throws Exception {
+		var response = mockMvc.perform(get("/t/version")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(409);
+		assertProblem(response);
+		assertThat(response.getContentAsString()).doesNotContain("Turno#77", "77");
+	}
+
 	private static void assertProblem(MockHttpServletResponse response) {
 		assertThat(response.getContentType()).startsWith(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
 	}
@@ -286,6 +339,27 @@ class ApiExceptionHandlerTest {
 
 		@GetMapping("/t/recurso/{id}")
 		void recurso(@PathVariable Long id) {
+		}
+
+		@GetMapping("/t/turno-conflicto")
+		void turnoConflicto() {
+			throw new TurnoEnConflictoException(31L, Instant.parse("2026-12-07T13:00:00Z"),
+					Instant.parse("2026-12-07T13:30:00Z"), 3L, 4L, MotivoConflicto.SILLON);
+		}
+
+		@GetMapping("/t/fuera-de-horario")
+		void fueraDeHorario() {
+			throw FueraDeAgendaException.fueraDeHorario();
+		}
+
+		@GetMapping("/t/en-bloqueo")
+		void enBloqueo() {
+			throw FueraDeAgendaException.enBloqueo(9L);
+		}
+
+		@GetMapping("/t/version")
+		void version() {
+			throw new ObjectOptimisticLockingFailureException("Turno#77", 77L);
 		}
 
 		@PostMapping("/t/fecha")

@@ -1,5 +1,7 @@
 package ar.global.odonto.agenda;
 
+import ar.global.odonto.agenda.turno.IntervaloTurno;
+import ar.global.odonto.agenda.turno.TransicionesTurno;
 import ar.global.odonto.common.persistence.TenantEntity;
 import ar.global.odonto.paciente.Paciente;
 import jakarta.persistence.Column;
@@ -14,8 +16,10 @@ import jakarta.persistence.Version;
 import java.time.Instant;
 
 /**
- * Turno. Solo estructura e indices: la validacion de solapamiento y la maquina de estados son de C-07.
- * {@code version} = bloqueo optimista para edicion concurrente. Instantes en UTC.
+ * Turno (C-02; comportamiento de C-07). Estado, horario, sillon, profesional y marca de sobreturno solo cambian por
+ * {@link #cambiarEstado} y {@link #reprogramar}: las reglas de agenda (solapamiento, horario, bloqueos) las valida
+ * {@code TurnoService} antes de llamarlos; aca solo se protege la maquina de estados (RN-AG-05) como ultima defensa.
+ * {@code version} = bloqueo optimista. Instantes en UTC.
  */
 @Entity
 @Table(name = "turno")
@@ -72,6 +76,50 @@ public class Turno extends TenantEntity {
 		this.fin = fin;
 	}
 
+	/** Alta de C-07: nace {@code PROGRAMADO}. */
+	public Turno(Paciente paciente, Profesional profesional, Sillon sillon, Prestacion prestacion,
+			IntervaloTurno intervalo, boolean sobreturno, String notas) {
+		this(paciente, profesional, sillon, prestacion, intervalo.inicio(), intervalo.fin());
+		this.esSobreturno = sobreturno;
+		this.notas = notas;
+	}
+
+	/**
+	 * Aplica una transicion de RN-AG-05. El motivo solo se guarda al cancelar.
+	 *
+	 * @throws IllegalStateException si la transicion no es valida (el servicio la rechaza antes con 409)
+	 */
+	public void cambiarEstado(EstadoTurno nuevo, String motivoCancelacion) {
+		if (!TransicionesTurno.permitida(estado, nuevo)) {
+			throw new IllegalStateException("Transicion de turno invalida");
+		}
+		this.estado = nuevo;
+		if (nuevo == EstadoTurno.CANCELADO) {
+			this.motivoCancelacion = motivoCancelacion;
+		}
+	}
+
+	/**
+	 * Mueve el turno (RN-AG-06). Conserva paciente, prestacion y estado.
+	 *
+	 * @throws IllegalStateException si el turno esta en un estado final
+	 */
+	public void reprogramar(Sillon nuevoSillon, Profesional nuevoProfesional, IntervaloTurno intervalo,
+			boolean sobreturno) {
+		if (!TransicionesTurno.reprogramable(estado)) {
+			throw new IllegalStateException("Turno no reprogramable");
+		}
+		this.sillon = nuevoSillon;
+		this.profesional = nuevoProfesional;
+		this.inicio = intervalo.inicio();
+		this.fin = intervalo.fin();
+		this.esSobreturno = sobreturno;
+	}
+
+	public IntervaloTurno getIntervalo() {
+		return new IntervaloTurno(inicio, fin);
+	}
+
 	public Paciente getPaciente() {
 		return paciente;
 	}
@@ -92,40 +140,20 @@ public class Turno extends TenantEntity {
 		return inicio;
 	}
 
-	public void setInicio(Instant inicio) {
-		this.inicio = inicio;
-	}
-
 	public Instant getFin() {
 		return fin;
-	}
-
-	public void setFin(Instant fin) {
-		this.fin = fin;
 	}
 
 	public EstadoTurno getEstado() {
 		return estado;
 	}
 
-	public void setEstado(EstadoTurno estado) {
-		this.estado = estado;
-	}
-
 	public boolean isEsSobreturno() {
 		return esSobreturno;
 	}
 
-	public void setEsSobreturno(boolean esSobreturno) {
-		this.esSobreturno = esSobreturno;
-	}
-
 	public String getMotivoCancelacion() {
 		return motivoCancelacion;
-	}
-
-	public void setMotivoCancelacion(String motivoCancelacion) {
-		this.motivoCancelacion = motivoCancelacion;
 	}
 
 	public String getNotas() {

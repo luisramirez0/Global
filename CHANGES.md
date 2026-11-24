@@ -235,7 +235,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/08_arquitectura_propuesta.md` §Patrones (Auditoría)
 
 ### [C-07] `turnos-agenda-engine`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado técnicamente (verificado a mano contra MySQL 8.4 por la persona el 2026-11-24; pendiente de review de integrante-1/2 y merge del PR). Evidencia: backend 707/707 con `./gradlew test` en dos corridas (línea base 545; 162 tests nuevos: dominio puro de solapamiento, estados, horario y bloqueos; repositorios; servicio con auditoría fail-closed; HTTP; RBAC; aislamiento A/B; concurrencia determinista sin `sleep` con control negativo sin lock; test de arquitectura `@Audited`/`readOnly`); JaCoCo `agenda.turno` 100 % de instrucciones y ramas; sin migraciones ni dependencias nuevas. Handoff: `knowledge-base/entrega/C-07.md`
 - **Resultado**: crear/confirmar/cancelar/reprogramar/marcar asistencia de turnos sin solapamientos (409), con sobreturno explícito y auditado; test de concurrencia en verde.
 - **Scope**:
   - `POST /api/turnos`, `PATCH /api/turnos/{id}/estado`, `PUT /api/turnos/{id}` (reprogramar), `GET /api/turnos?desde&hasta&sillonId` (vista diaria/semanal).
