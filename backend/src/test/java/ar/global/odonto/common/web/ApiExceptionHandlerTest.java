@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import ar.global.odonto.common.tenant.TenantNotSetException;
 import ar.global.odonto.consultorio.registro.EmailYaRegistradoException;
+import ar.global.odonto.paciente.abm.DatoInvalidoException;
+import ar.global.odonto.paciente.abm.DniDuplicadoException;
 import ar.global.odonto.security.DemasiadosIntentosException;
 import ar.global.odonto.usuario.auth.CredencialesInvalidasException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -13,6 +15,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -21,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -149,11 +154,62 @@ class ApiExceptionHandlerTest {
 		assertThat(response.getContentAsString()).doesNotContain("13:00");
 	}
 
+	@Test
+	void notFoundIs404Generic() throws Exception {
+		var response = mockMvc.perform(get("/t/404")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(404);
+		assertProblem(response);
+		assertThat(response.getContentAsString()).doesNotContain("Paciente").doesNotContain("4242");
+	}
+
+	@Test
+	void domainFormatErrorIs400WithFieldsLikeBeanValidation() throws Exception {
+		var response = mockMvc.perform(get("/t/dato-invalido")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(400);
+		assertProblem(response);
+		JsonNode body = mapper.readTree(response.getContentAsString());
+		assertThat(body.get("errores").findValuesAsText("campo")).containsExactly("dni", "telefono");
+	}
+
+	@Test
+	void duplicateDniIs409WithExistingPatientId() throws Exception {
+		var response = mockMvc.perform(get("/t/dni-duplicado")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(409);
+		assertProblem(response);
+		assertThat(mapper.readTree(response.getContentAsString()).get("pacienteId").asLong()).isEqualTo(7L);
+	}
+
+	@Test
+	void pathVariableTypeMismatchIs400WithoutEcho() throws Exception {
+		var response = mockMvc.perform(get("/t/recurso/abc-secreto")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(400);
+		assertProblem(response);
+		assertThat(response.getContentAsString()).doesNotContain("abc-secreto");
+		assertThat(mapper.readTree(response.getContentAsString()).get("instance").asText()).isEqualTo("about:blank");
+	}
+
+	@Test
+	void invalidDateInJsonIs400WithoutEcho() throws Exception {
+		var response = mockMvc.perform(post("/t/fecha").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"fecha\":\"1985-13-99\"}")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(400);
+		assertProblem(response);
+		assertThat(response.getContentAsString()).doesNotContain("1985-13-99");
+	}
+
 	private static void assertProblem(MockHttpServletResponse response) {
 		assertThat(response.getContentType()).startsWith(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
 	}
 
 	record Body(@NotBlank @Email String email, @NotBlank String nombre) {
+	}
+
+	record ConFecha(LocalDate fecha) {
 	}
 
 	@RestController
@@ -211,6 +267,29 @@ class ApiExceptionHandlerTest {
 		@GetMapping("/t/500")
 		void boom() {
 			throw new IllegalStateException("fallo con ana@consultorio.test");
+		}
+
+		@GetMapping("/t/404")
+		void notFoundGenerico() {
+			throw new RecursoNoEncontradoException();
+		}
+
+		@GetMapping("/t/dato-invalido")
+		void datoInvalido() {
+			throw new DatoInvalidoException(List.of("dni", "telefono"));
+		}
+
+		@GetMapping("/t/dni-duplicado")
+		void dniDuplicado() {
+			throw new DniDuplicadoException(7L);
+		}
+
+		@GetMapping("/t/recurso/{id}")
+		void recurso(@PathVariable Long id) {
+		}
+
+		@PostMapping("/t/fecha")
+		void fecha(@RequestBody ConFecha body) {
 		}
 	}
 }

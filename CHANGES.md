@@ -203,7 +203,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/06_funcionalidades.md` §US-002, §US-013
 
 ### [C-05] `pacientes-api`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (verificación técnica; verificado a mano contra MySQL 8.4; pendiente de PR). Evidencia: backend 342/342 con `./gradlew test` y 448/448 tras integrar `main` con C-04 (línea base 264; tests de alta, DNI duplicado con otro formato y en carrera, búsqueda por nombre y DNI, E.164 inválido, baja lógica y reactivación, RBAC por rol y aislamiento A/B en todos los endpoints); sin migraciones nuevas. Change: `openspec/changes/c-05-pacientes-api`. Handoff: `knowledge-base/entrega/C-05.md`
 - **Resultado**: ABM de pacientes con búsqueda por nombre/DNI, DNI único por consultorio y baja lógica.
 - **Scope**:
   - `/api/pacientes` (alta, edición, baja lógica, búsqueda `?q=`), validación de teléfono E.164 (para wa.me), DNI único (409).

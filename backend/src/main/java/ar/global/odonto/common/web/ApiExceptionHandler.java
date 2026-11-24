@@ -2,6 +2,8 @@ package ar.global.odonto.common.web;
 
 import ar.global.odonto.common.tenant.TenantNotSetException;
 import ar.global.odonto.consultorio.registro.EmailYaRegistradoException;
+import ar.global.odonto.paciente.abm.DatoInvalidoException;
+import ar.global.odonto.paciente.abm.DniDuplicadoException;
 import ar.global.odonto.security.DemasiadosIntentosException;
 import ar.global.odonto.usuario.auth.CredencialesInvalidasException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
@@ -44,6 +48,23 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		return ResponseEntity.badRequest().body(problem);
 	}
 
+	/**
+	 * Parametro con tipo invalido (p. ej. {@code /api/pacientes/abc}). El handler por defecto repite el valor en
+	 * {@code detail} y en {@code instance}: se responde solo con el nombre del parametro e {@code instance}
+	 * neutralizado como en el resto de los errores.
+	 */
+	@Override
+	protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers,
+			HttpStatusCode status, WebRequest request) {
+		String campo = ex instanceof MethodArgumentTypeMismatchException m ? m.getName() : ex.getPropertyName();
+		return ResponseEntity.badRequest().body(invalidos(List.of(campo == null ? "parametro" : campo)));
+	}
+
+	@ExceptionHandler(DatoInvalidoException.class)
+	ResponseEntity<ProblemDetail> datoInvalido(DatoInvalidoException ex) {
+		return of(invalidos(ex.getCampos()));
+	}
+
 	@ExceptionHandler(ValidacionException.class)
 	ResponseEntity<ProblemDetail> validacion(ValidacionException ex) {
 		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Datos inválidos",
@@ -56,6 +77,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 	ResponseEntity<ProblemDetail> noEncontrado(RecursoNoEncontradoException ex) {
 		ProblemDetail problem = problem(HttpStatus.NOT_FOUND, "Recurso no encontrado",
 				"El recurso solicitado no existe.");
+		return of(problem);
+	}
+
+	@ExceptionHandler(DniDuplicadoException.class)
+	ResponseEntity<ProblemDetail> dniDuplicado(DniDuplicadoException ex) {
+		ProblemDetail problem = problem(HttpStatus.CONFLICT, "DNI ya registrado", ex.getMessage());
+		problem.setProperty("pacienteId", ex.getPacienteId());
 		return of(problem);
 	}
 
@@ -115,6 +143,15 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 					root.getClass().getName(), request.getMethod(), request.getRequestURI(), where);
 		}
 		return of(problem(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno", "Ocurrió un error inesperado."));
+	}
+
+	/** Mismo formato que Bean Validation: lista de campos con un mensaje fijo, nunca el valor recibido. */
+	private static ProblemDetail invalidos(List<String> campos) {
+		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Datos inválidos",
+				"La solicitud tiene campos inválidos.");
+		problem.setProperty("errores", campos.stream().map(c -> Map.of("campo", c, "mensaje", "formato inválido"))
+				.toList());
+		return problem;
 	}
 
 	private static ProblemDetail problem(HttpStatus status, String title, String detail) {
