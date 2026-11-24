@@ -34,3 +34,8 @@
 
 - [x] 5.1 (393/393 en 25 archivos; build JS 38,2 kB, 13,2 kB gzip) `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`; `grep` de `innerHTML|outerHTML|insertAdjacentHTML|localStorage|console.` en `src/` fuera de tests vacío; `git diff main -- backend` vacío.
 - [x] 5.2 (verificación manual OK por la persona con ADMIN y RECEPCION; `[x]` marcado el 2026-11-24) Handoff `knowledge-base/entrega/C-11.md` y `CHANGES.md` §C-11 con evidencia (marcar `[x]` solo tras la verificación técnica).
+
+## Archivo (2026-11-24)
+
+- Mergeado en PR #14 (merge `b918ca4`). Specs sincronizadas: nueva `frontend-agenda-config` (7 requisitos); `frontend-shell` con el requisito agregado "Navegación a la configuración".
+- **Pendiente para C-04 (o un PR aparte):** IT permanente de reactivación exitosa (`PUT` con `activo: true` en sillón y prestación → 200 y activo al releer; `PUT` sin `activo` no reactiva) en `SillonControllerIT` y `PrestacionControllerIT`. En C-11 se verificó solo con un IT temporal 3/3 no versionado (ver `knowledge-base/entrega/C-11.md`).
