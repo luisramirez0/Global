@@ -11,6 +11,8 @@ import static org.mockito.Mockito.verify;
 import ar.global.odonto.auditoria.AccionAuditoria;
 import ar.global.odonto.auditoria.AuditLog;
 import ar.global.odonto.auditoria.AuditLogRepository;
+import ar.global.odonto.auditoria.AuditService;
+import ar.global.odonto.auditoria.ContextoAuditoria;
 import ar.global.odonto.config.AppProperties;
 import ar.global.odonto.security.DemasiadosIntentosException;
 import ar.global.odonto.security.JwtConfig;
@@ -40,7 +42,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /** Spec authentication "Inicio de sesión" y "Auditoría del inicio de sesión" (design D6). */
 @PersistenceTest
-@Import({ LoginService.class, PasswordConfig.class, TokenService.class, JwtConfig.class, LoginRateLimiter.class })
+@Import({ LoginService.class, AuditService.class, ContextoAuditoria.class, PasswordConfig.class, TokenService.class, JwtConfig.class, LoginRateLimiter.class })
 @EnableConfigurationProperties(AppProperties.class)
 @ExtendWith(OutputCaptureExtension.class)
 class LoginServiceTest {
@@ -107,8 +109,10 @@ class LoginServiceTest {
 			assertThat(a.getAccion()).isEqualTo(AccionAuditoria.LOGIN);
 			assertThat(a.getUsuarioId()).isEqualTo(usuarioId);
 			assertThat(a.getConsultorioId()).isEqualTo(consultorioId);
+			assertThat(a.getEntidad()).isEqualTo("Usuario");
+			assertThat(a.getEntidadId()).isEqualTo(usuarioId);
 			assertThat(a.getIp()).isEqualTo(IP);
-			assertThat(a.getDetalle()).isEqualTo("ok");
+			assertThat(a.getDetalle()).isEqualTo("{\"resultado\":\"ok\"}");
 		});
 	}
 
@@ -119,9 +123,51 @@ class LoginServiceTest {
 
 		assertThat(audits()).singleElement().satisfies(a -> {
 			assertThat(a.getAccion()).isEqualTo(AccionAuditoria.LOGIN);
-			assertThat(a.getDetalle()).isEqualTo("fallido");
-			assertThat(a.getDetalle()).doesNotContain(EMAIL);
+			assertThat(a.getUsuarioId()).isEqualTo(usuarioId);
+			assertThat(a.getConsultorioId()).isEqualTo(consultorioId);
+			assertThat(a.getEntidad()).isEqualTo("Usuario");
+			assertThat(a.getEntidadId()).isEqualTo(usuarioId);
+			assertThat(a.getIp()).isEqualTo(IP);
+			assertThat(a.getDetalle()).isEqualTo("{\"resultado\":\"fallido\"}");
+			assertThat(a.getDetalle()).doesNotContain(EMAIL).doesNotContain("incorrecta");
 		});
+	}
+
+	/** El LOGIN fallido se escribe antes de lanzar 401: el registro debe sobrevivir a la excepcion (no rollback). */
+	@Test
+	void failedLoginAuditRowSurvivesTheExceptionPathEvenWhenRepeated() {
+		for (int i = 0; i < 2; i++) {
+			assertThatThrownBy(() -> login.login(EMAIL, "incorrecta", IP))
+					.isInstanceOf(CredencialesInvalidasException.class);
+		}
+
+		assertThat(audits()).hasSize(2).allSatisfy(a -> {
+			assertThat(a.getDetalle()).isEqualTo("{\"resultado\":\"fallido\"}");
+			assertThat(a.getUsuarioId()).isEqualTo(usuarioId);
+		});
+	}
+
+	@Test
+	void inactiveUserFailedLoginIsAuditedAsFailed() {
+		fixtures.inTenant(consultorioId, () -> {
+			usuarios.findById(usuarioId).orElseThrow().setActivo(false);
+			return null;
+		});
+
+		assertThatThrownBy(() -> login.login(EMAIL, PASSWORD, IP)).isInstanceOf(CredencialesInvalidasException.class);
+
+		assertThat(audits()).singleElement()
+				.satisfies(a -> assertThat(a.getDetalle()).isEqualTo("{\"resultado\":\"fallido\"}"));
+	}
+
+	@Test
+	void failedLoginOfOneTenantUserIsNotVisibleFromAnotherTenant() {
+		Long otro = fixtures.createConsultorio("Consultorio B");
+		assertThatThrownBy(() -> login.login(EMAIL, "incorrecta", IP))
+				.isInstanceOf(CredencialesInvalidasException.class);
+
+		assertThat(fixtures.inTenant(otro, () -> auditoria.findAll(Pageable.unpaged()).getContent())).isEmpty();
+		assertThat(audits()).hasSize(1);
 	}
 
 	@Test

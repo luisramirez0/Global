@@ -2,16 +2,22 @@ package ar.global.odonto.usuario.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ar.global.odonto.auditoria.AccionAuditoria;
+import ar.global.odonto.auditoria.AuditLog;
+import ar.global.odonto.auditoria.AuditLogRepository;
 import ar.global.odonto.testsupport.AuthFlows;
 import ar.global.odonto.testsupport.TenantFixtures;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 /** Spec authentication "Inicio de sesión" y "Límite de intentos de login" via HTTP. Emails unicos por test. */
@@ -25,6 +31,12 @@ class LoginControllerIT {
 
 	@Autowired
 	private TenantFixtures fixtures;
+
+	@Autowired
+	private AuditLogRepository auditLogs;
+
+	@Autowired
+	private JdbcTemplate jdbc;
 
 	private final ObjectMapper mapper = new ObjectMapper();
 
@@ -79,5 +91,62 @@ class LoginControllerIT {
 	@Test
 	void missingCredentialsAre400() throws Exception {
 		assertThat(auth.login("", "").getStatus()).isEqualTo(400);
+	}
+
+	@Test
+	void successfulLoginIsAuditedWithOkResultAndRequestIp() throws Exception {
+		AuthFlows.Cuenta cuenta = auth.registrar("audit-ok@consultorio.test");
+
+		assertThat(auth.login(cuenta.email(), AuthFlows.PASSWORD).getStatus()).isEqualTo(200);
+
+		assertThat(logins(cuenta.consultorioId())).singleElement().satisfies(a -> {
+			assertThat(a.getUsuarioId()).isEqualTo(cuenta.usuarioId());
+			assertThat(a.getConsultorioId()).isEqualTo(cuenta.consultorioId());
+			assertThat(a.getEntidad()).isEqualTo("Usuario");
+			assertThat(a.getEntidadId()).isEqualTo(cuenta.usuarioId());
+			assertThat(a.getDetalle()).isEqualTo("{\"resultado\":\"ok\"}");
+			assertThat(a.getIp()).isEqualTo("127.0.0.1");
+		});
+	}
+
+	/** Responde 401 y aun asi la fila de auditoria existe: no la revierte la excepcion. */
+	@Test
+	void wrongPasswordRespondsWith401AndStillPersistsTheFailedAuditRow() throws Exception {
+		AuthFlows.Cuenta cuenta = auth.registrar("audit-fail@consultorio.test");
+
+		MockHttpServletResponse r = auth.login(cuenta.email(), "incorrecta");
+
+		assertThat(r.getStatus()).isEqualTo(401);
+		assertThat(logins(cuenta.consultorioId())).singleElement().satisfies(a -> {
+			assertThat(a.getUsuarioId()).isEqualTo(cuenta.usuarioId());
+			assertThat(a.getConsultorioId()).isEqualTo(cuenta.consultorioId());
+			assertThat(a.getEntidad()).isEqualTo("Usuario");
+			assertThat(a.getEntidadId()).isEqualTo(cuenta.usuarioId());
+			assertThat(a.getDetalle()).isEqualTo("{\"resultado\":\"fallido\"}");
+			assertThat(a.getIp()).isEqualTo("127.0.0.1");
+		});
+		assertThat(r.getContentAsString()).doesNotContain("fallido");
+	}
+
+	@Test
+	void unknownEmailWritesNoAuditRowAnywhere() throws Exception {
+		AuthFlows.Cuenta cuenta = auth.registrar("audit-none@consultorio.test");
+		int antes = totalAuditRows();
+
+		MockHttpServletResponse r = auth.login("nadie-audit@consultorio.test", AuthFlows.PASSWORD);
+
+		assertThat(r.getStatus()).isEqualTo(401);
+		assertThat(totalAuditRows()).isEqualTo(antes);
+		assertThat(logins(cuenta.consultorioId())).isEmpty();
+	}
+
+	private List<AuditLog> logins(Long consultorioId) {
+		return fixtures.inTenant(consultorioId, () -> auditLogs.findAll(Pageable.unpaged()).getContent().stream()
+				.filter(a -> a.getAccion() == AccionAuditoria.LOGIN).toList());
+	}
+
+	private int totalAuditRows() {
+		Integer n = jdbc.queryForObject("select count(*) from audit_log", Integer.class);
+		return n == null ? 0 : n;
 	}
 }

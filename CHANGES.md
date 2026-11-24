@@ -82,12 +82,12 @@ GATE 2: C-02 ✓
 GATE 3: C-03 ✓     ← FORK (5 lanes)
   → C-04 consultorio-config-api             [Integrante 4]
   → C-05 pacientes-api                      [Integrante 5]
-  → C-06 auditoria-core                     [Integrante 3]
+  → C-06 auditoria-core                     [Integrante 2]
   → C-10 frontend-shell-auth (integración real)  [Integrante 1]
-  → tests de dominio puro de turnos (máquina de estados, solapamiento; parte de C-07)  [Integrante 2 — sin dependencias de datos]
+  → tests de dominio puro de turnos (máquina de estados, solapamiento; parte de C-07)  [Integrante 3 — sin dependencias de datos]
 
 GATE 4: C-04 ✓ + C-05 ✓ + C-06 ✓     ← FORK
-  → C-07 turnos-agenda-engine               [Integrante 2]
+  → C-07 turnos-agenda-engine               [Integrante 3]
   → C-08 ficha-clinica-consentimiento       [Integrante 5 — si C-05 ✓, C-06 ✓]
   → C-11 frontend-config                    [Integrante 4 — si C-10 ✓, C-04 ✓]
 
@@ -118,9 +118,9 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
 | 1 | C-01 | contrato OpenAPI / tests de dominio | contrato auth / seguridad | contrato config | contrato pacientes |
 | 2 | C-10 (mocks) | C-02 | prepara C-03 | — | — |
 | 3 | C-10 (integra) | tests puros de turnos | C-03 | — | — |
-| 4 | C-10 (cierre) | — | C-06 | C-04 | C-05 |
-| 5 | C-13 (con mocks) | C-07 | revisión de seguridad | C-11 | C-08 |
-| 6 | C-13 | C-07 (cierre) | C-15 | C-09 | C-12 |
+| 4 | C-10 (cierre) | C-06 | tests puros de turnos | C-04 | C-05 |
+| 5 | C-13 (con mocks) | revisión de seguridad | C-07 | C-11 | C-08 |
+| 6 | C-13 | — | C-07 (cierre) + C-15 | C-09 | C-12 |
 | 7 | C-14 | C-16 (coordina) | C-16 (seguridad) | C-16 | C-16 |
 
 ---
@@ -219,7 +219,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/06_funcionalidades.md` §US-020
 
 ### [C-06] `auditoria-core`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` implementado y verificado contra H2 `MODE=MySQL` y manualmente contra MySQL 8.4 por la persona (2026-11-24: login ok/fallido y `GET /api/auditoria` sin filtros) (pendiente: merge del PR con review obligatoria de integrante-1 y archivado). Evidencia: backend 545/545 con `./gradlew test` (línea base 448; 97 tests nuevos: detalle restringido, contexto usuario/IP, `AuditService` MANDATORY, `buscar` con filtros, aspecto `@Audited` con fail-closed y rollback, LOGIN fallido persistido en servicio y por HTTP, `GET /api/auditoria` con paginado, filtros, RBAC y aislamiento A/B); JaCoCo `auditoria` 94 % y `auditoria.consulta` 100 % de instrucciones; sin migraciones nuevas (única dependencia nueva: `spring-boot-starter-aop`). Handoff: `knowledge-base/entrega/C-06.md`
 - **Resultado**: un servicio/aspecto registra acciones READ/CREATE/UPDATE/DELETE/EXPORT/LOGIN de forma inmutable y es invocable desde otros módulos.
 - **Scope**:
   - `AuditService` + aspecto/evento (`@Audited`): usuario, entidad, id, detalle JSON, IP, fecha; tabla insert-only (sin update/delete en el repositorio).
@@ -227,7 +227,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - Tests: insert-only, tenant, acceso denegado a RECEPCION, un fallo de auditoría no rompe silenciosamente la operación.
 - **Dependencias**: `C-03`
 - **Zona**: `backend/src/main/java/.../auditoria/`, `backend/src/test/.../auditoria/`
-- **Responsable**: Integrante 3
+- **Responsable**: Integrante 2 (intercambio con C-07 acordado el 2026-11-24)
 - **Governance**: CRITICO (audit trail)
 - **Leer antes**:
   - `knowledge-base/05_reglas_de_negocio.md` §RN-DS-02, §RN-DS-06
@@ -244,7 +244,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - Tests (TDD estricto, empezar por dominio puro): solapamiento exacto/parcial/adyacente, sobreturno, transiciones inválidas, reprogramación revalida, concurrencia de dos creaciones simultáneas.
 - **Dependencias**: `C-04, C-05, C-06`
 - **Zona**: `backend/src/main/java/.../agenda/turno/`, `backend/src/test/.../agenda/turno/`
-- **Responsable**: Integrante 2
+- **Responsable**: Integrante 3 (intercambio con C-06 acordado el 2026-11-24)
 - **Governance**: MEDIO (lógica de agenda; checkpoints)
 - **Leer antes**:
   - `knowledge-base/05_reglas_de_negocio.md` §RN-AG
@@ -497,8 +497,8 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
 | C-03 | auth-jwt-rbac | 1 | CRITICO | Integrante 3 | MVP |
 | C-04 | consultorio-config-api | 2 | BAJO | Integrante 4 | MVP |
 | C-05 | pacientes-api | 2 | MEDIO | Integrante 5 | MVP |
-| C-06 | auditoria-core | 2 | CRITICO | Integrante 3 | MVP |
-| C-07 | turnos-agenda-engine | 2 | MEDIO | Integrante 2 | MVP |
+| C-06 | auditoria-core | 2 | CRITICO | Integrante 2 | MVP |
+| C-07 | turnos-agenda-engine | 2 | MEDIO | Integrante 3 | MVP |
 | C-08 | ficha-clinica-consentimiento | 2 | ALTO | Integrante 5 | MVP |
 | C-09 | recordatorios-whatsapp-email | 2 | MEDIO | Integrante 4 | MVP |
 | C-10 | frontend-shell-auth | 3 | MEDIO | Integrante 1 | MVP |
