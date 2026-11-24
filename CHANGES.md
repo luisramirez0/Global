@@ -310,7 +310,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/09_decisiones_y_supuestos.md` §DD-04
 
 ### [C-11] `frontend-config`
-- **Estado**: `[x]` completado (2026-11-24) en la rama `c-11-frontend-config`: `npm test` 393/393 en 25 archivos (línea base 210; 183 tests nuevos), `npm run lint`, `npm run typecheck` y `npm run build` limpios; sin cambios en `backend/` ni migraciones. V-D7 (reactivación por `PUT activo:true`) verificado en el backend con un IT temporal 3/3 en `gradle:8.14-jdk21`, no versionado (IT permanente pendiente para C-04). Verificación manual en el navegador contra la API real por la persona con roles ADMIN y RECEPCION: OK. Handoff: `knowledge-base/entrega/C-11.md`
+- **Estado**: `[x]` completado (2026-11-24), mergeado en PR #14 (merge `b918ca4`) y archivado en `openspec/changes/archive/2026-11-24-c-11-frontend-config`: `npm test` 393/393 en 25 archivos (línea base 210; 183 tests nuevos), `npm run lint`, `npm run typecheck` y `npm run build` limpios; sin cambios en `backend/` ni migraciones. V-D7 (reactivación por `PUT activo:true`) verificado en el backend con un IT temporal 3/3 en `gradle:8.14-jdk21`, no versionado (**pendiente**: IT permanente de reactivación en la zona de C-04 o un PR aparte). Verificación manual en el navegador contra la API real por la persona con roles ADMIN y RECEPCION: OK. Handoff: `knowledge-base/entrega/C-11.md`
 - **Resultado**: pantallas para gestionar sillones, prestaciones, horarios y bloqueos.
 - **Scope**:
   - `src/pages/config/` con formularios CRUD de sillones, prestaciones (duración), horarios de atención y bloqueos.
