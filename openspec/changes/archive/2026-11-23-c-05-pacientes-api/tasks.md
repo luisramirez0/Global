@@ -39,5 +39,5 @@
 ## Workflow follow-up
 
 - [x] (2026-11-23, `docker compose up` a pedido de la persona; MySQL 8.4: búsqueda sin acentos OK, `perez`→`Pérez`) Verificación manual contra MySQL 8 a cargo de la persona (`docker compose up` no se ejecuta sin pedido, regla 9): alta, búsqueda con y sin acentos, `409`, baja y reactivación.
-- [ ] PR único hacia `main` solo con autorización explícita, plantilla `.github/pull_request_template.md`, Conventional Commits; mencionar a integrante-1/2 por el cambio en `ApiExceptionHandler`.
-- [ ] Archivar el change cuando el PR esté mergeado.
+- [x] (PR #9, merge `ed348b7`) PR único hacia `main` solo con autorización explícita, plantilla `.github/pull_request_template.md`, Conventional Commits; mencionar a integrante-1/2 por el cambio en `ApiExceptionHandler`.
+- [x] Archivar el change cuando el PR esté mergeado.
