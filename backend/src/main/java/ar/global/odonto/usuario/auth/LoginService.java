@@ -1,8 +1,8 @@
 package ar.global.odonto.usuario.auth;
 
 import ar.global.odonto.auditoria.AccionAuditoria;
-import ar.global.odonto.auditoria.AuditLog;
-import ar.global.odonto.auditoria.AuditLogRepository;
+import ar.global.odonto.auditoria.AuditService;
+import ar.global.odonto.auditoria.DetalleAuditoria;
 import ar.global.odonto.common.tenant.TenantContext;
 import ar.global.odonto.security.LoginRateLimiter;
 import ar.global.odonto.security.TokenService;
@@ -26,7 +26,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * verifica igual contra un hash de relleno para no revelar por tiempo si el email existe.</li>
  * <li>Uso de {@code runAsSystem}: solo la busqueda del usuario por email (contrato C-02). El resto corre en
  * {@code runAs(consultorio del usuario)}.</li>
- * <li>Auditoria {@code LOGIN} ("ok"/"fallido") para usuarios existentes; con email inexistente solo un log de
+ * <li>Auditoria {@code LOGIN} (detalle {@code {"resultado":"ok"|"fallido"}}) via {@link AuditService} para
+ * usuarios existentes; el fallido se confirma en su propia transaccion antes del 401; con email inexistente solo un log de
  * aplicacion sin el email (decision Q3 de C-02: {@code audit_log.consultorio_id} es NOT NULL).</li>
  * </ul>
  */
@@ -40,7 +41,7 @@ public class LoginService {
 	private static final Logger log = LoggerFactory.getLogger(LoginService.class);
 
 	private final UsuarioRepository usuarios;
-	private final AuditLogRepository auditoria;
+	private final AuditService auditoria;
 	private final PasswordEncoder passwordEncoder;
 	private final TokenService tokens;
 	private final LoginRateLimiter limiter;
@@ -48,7 +49,7 @@ public class LoginService {
 	private final Clock clock;
 	private final String hashDeRelleno;
 
-	public LoginService(UsuarioRepository usuarios, AuditLogRepository auditoria, PasswordEncoder passwordEncoder,
+	public LoginService(UsuarioRepository usuarios, AuditService auditoria, PasswordEncoder passwordEncoder,
 			TokenService tokens, LoginRateLimiter limiter, TransactionTemplate tx, Clock clock) {
 		this.usuarios = usuarios;
 		this.auditoria = auditoria;
@@ -88,7 +89,7 @@ public class LoginService {
 		TenantContext.runAs(consultorioId, () -> tx.execute(s -> {
 			usuarios.findById(usuarioId).orElseThrow(CredencialesInvalidasException::new)
 					.setUltimoLogin(clock.instant());
-			auditoria.save(registroLogin(usuarioId, RESULTADO_OK, ip));
+			registrarLogin(usuarioId, RESULTADO_OK, ip);
 			return null;
 		}));
 		TokenEmitido token = tokens.emitir(usuarioId, consultorioId, usuario.getRol());
@@ -97,11 +98,16 @@ public class LoginService {
 	}
 
 	private void auditar(Long consultorioId, Long usuarioId, String resultado, String ip) {
-		TenantContext.runAs(consultorioId,
-				() -> tx.execute(s -> auditoria.save(registroLogin(usuarioId, resultado, ip))));
+		// Transaccion propia y ya confirmada cuando se lanza el 401: la excepcion no revierte esta fila. Si el
+		// registro falla, el login responde 500 en lugar de 401 (fail-closed, design D2).
+		TenantContext.runAs(consultorioId, () -> tx.execute(s -> {
+			registrarLogin(usuarioId, resultado, ip);
+			return null;
+		}));
 	}
 
-	private static AuditLog registroLogin(Long usuarioId, String resultado, String ip) {
-		return new AuditLog(usuarioId, AccionAuditoria.LOGIN, ENTIDAD_AUDITADA, usuarioId, resultado, ip);
+	private void registrarLogin(Long usuarioId, String resultado, String ip) {
+		auditoria.registrarComo(usuarioId, ip, AccionAuditoria.LOGIN, ENTIDAD_AUDITADA, usuarioId,
+				DetalleAuditoria.codigo("resultado", resultado));
 	}
 }

@@ -24,6 +24,10 @@ public class ApiCalls {
 		return mockMvc.perform(MockMvcRequestBuilders.get(url).header("Authorization", bearer)).andReturn().getResponse();
 	}
 
+	public MockHttpServletResponse getSinToken(String url) throws Exception {
+		return mockMvc.perform(MockMvcRequestBuilders.get(url)).andReturn().getResponse();
+	}
+
 	public MockHttpServletResponse post(String bearer, String url, String json) throws Exception {
 		return mockMvc.perform(MockMvcRequestBuilders.post(url).header("Authorization", bearer).contentType(MediaType.APPLICATION_JSON)
 				.content(json)).andReturn().getResponse();

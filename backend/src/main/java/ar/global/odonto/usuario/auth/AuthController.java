@@ -1,5 +1,6 @@
 package ar.global.odonto.usuario.auth;
 
+import ar.global.odonto.auditoria.ContextoAuditoria;
 import ar.global.odonto.consultorio.registro.RegistroRequest;
 import ar.global.odonto.consultorio.registro.RegistroResponse;
 import ar.global.odonto.consultorio.registro.RegistroService;
@@ -39,10 +40,10 @@ public class AuthController {
 		return registro.registrar(request);
 	}
 
-	/** La IP es la del socket: sin proxy configurado no se confia en {@code X-Forwarded-For} (design D6). */
+	/** IP del socket via el resolutor de auditoria; no se confia en {@code X-Forwarded-For} (C-06 D5). */
 	@PostMapping("/login")
 	public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
-		return login.login(request.email(), request.password(), http.getRemoteAddr());
+		return login.login(request.email(), request.password(), ContextoAuditoria.ip(http));
 	}
 
 	@GetMapping("/me")
