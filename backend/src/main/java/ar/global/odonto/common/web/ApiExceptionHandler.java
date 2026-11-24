@@ -1,5 +1,7 @@
 package ar.global.odonto.common.web;
 
+import ar.global.odonto.agenda.turno.FueraDeAgendaException;
+import ar.global.odonto.agenda.turno.TurnoEnConflictoException;
 import ar.global.odonto.common.tenant.TenantNotSetException;
 import ar.global.odonto.consultorio.registro.EmailYaRegistradoException;
 import ar.global.odonto.paciente.abm.DatoInvalidoException;
@@ -7,11 +9,13 @@ import ar.global.odonto.paciente.abm.DniDuplicadoException;
 import ar.global.odonto.security.DemasiadosIntentosException;
 import ar.global.odonto.usuario.auth.CredencialesInvalidasException;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -98,6 +102,43 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 				"La solicitud referencia un recurso inexistente o no permitido.");
 		problem.setProperty("errores", List.of(Map.of("campo", ex.getCampo(), "mensaje", "referencia inválida")));
 		return of(problem);
+	}
+
+	/** C-07 design D9: identifica el turno en conflicto solo por ids e instantes, sin datos del paciente. */
+	@ExceptionHandler(TurnoEnConflictoException.class)
+	ResponseEntity<ProblemDetail> turnoEnConflicto(TurnoEnConflictoException ex) {
+		ProblemDetail problem = problem(HttpStatus.CONFLICT, "Turno en conflicto",
+				"El horario se superpone con otro turno.");
+		Map<String, Object> conflicto = new LinkedHashMap<>();
+		conflicto.put("turnoId", ex.getTurnoId());
+		conflicto.put("inicio", ex.getInicio().toString());
+		conflicto.put("fin", ex.getFin().toString());
+		conflicto.put("sillonId", ex.getSillonId());
+		conflicto.put("profesionalId", ex.getProfesionalId());
+		conflicto.put("motivo", ex.getMotivo().name());
+		problem.setProperty("conflicto", conflicto);
+		return of(problem);
+	}
+
+	/** C-07 design D9: fuera de horario, de grilla o dentro de un bloqueo (con su id, nunca su motivo). */
+	@ExceptionHandler(FueraDeAgendaException.class)
+	ResponseEntity<ProblemDetail> fueraDeAgenda(FueraDeAgendaException ex) {
+		boolean bloqueo = ex.getBloqueoId() != null;
+		ProblemDetail problem = problem(HttpStatus.UNPROCESSABLE_ENTITY, "Turno fuera de agenda",
+				bloqueo ? "El horario está bloqueado." : "El horario está fuera de la atención o de la grilla.");
+		problem.setProperty("errores", List.of(Map.of("campo", ex.getCampo(), "mensaje",
+				bloqueo ? "dentro de un bloqueo" : "fuera del horario de atención")));
+		if (bloqueo) {
+			problem.setProperty("bloqueoId", ex.getBloqueoId());
+		}
+		return of(problem);
+	}
+
+	/** Edicion concurrente detectada por {@code @Version} (C-07 design D1): 409 generico, sin entidad ni id. */
+	@ExceptionHandler(OptimisticLockingFailureException.class)
+	ResponseEntity<ProblemDetail> versionDesactualizada(OptimisticLockingFailureException ex) {
+		return of(problem(HttpStatus.CONFLICT, "Modificación concurrente",
+				"El recurso fue modificado por otra operación. Volvé a intentarlo."));
 	}
 
 	@ExceptionHandler(EmailYaRegistradoException.class)

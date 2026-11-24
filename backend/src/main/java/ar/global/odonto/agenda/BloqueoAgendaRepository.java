@@ -22,4 +22,19 @@ public interface BloqueoAgendaRepository extends JpaRepository<BloqueoAgenda, Lo
 			""")
 	List<BloqueoAgenda> buscar(@Param("desde") Instant desde, @Param("hasta") Instant hasta,
 			@Param("sillonId") Long sillonId, @Param("profesionalId") Long profesionalId);
+
+	/**
+	 * Bloqueos que aplican a un turno (C-07 design D11, contrato de C-04): se intersecan con {@code [inicio, fin)}
+	 * y su sillon y su profesional son nulos (cualquiera) o iguales a los del turno. A diferencia de
+	 * {@link #buscar}, un ambito nulo SI incluye los bloqueos de todo el consultorio.
+	 */
+	@Query("""
+			select b from BloqueoAgenda b
+			where b.inicio < :fin and b.fin > :inicio
+			  and (b.sillon is null or b.sillon.id = :sillonId)
+			  and (b.profesional is null or b.profesional.id = :profesionalId)
+			order by b.inicio, b.id
+			""")
+	List<BloqueoAgenda> aplicables(@Param("inicio") Instant inicio, @Param("fin") Instant fin,
+			@Param("sillonId") Long sillonId, @Param("profesionalId") Long profesionalId);
 }
