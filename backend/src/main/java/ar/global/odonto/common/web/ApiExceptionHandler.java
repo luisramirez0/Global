@@ -4,6 +4,7 @@ import ar.global.odonto.common.tenant.TenantNotSetException;
 import ar.global.odonto.consultorio.registro.EmailYaRegistradoException;
 import ar.global.odonto.paciente.abm.DatoInvalidoException;
 import ar.global.odonto.paciente.abm.DniDuplicadoException;
+import ar.global.odonto.paciente.ficha.ProfesionalNoVinculadoException;
 import ar.global.odonto.security.DemasiadosIntentosException;
 import ar.global.odonto.usuario.auth.CredencialesInvalidasException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -89,7 +91,26 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
 	@ExceptionHandler(ConflictoException.class)
 	ResponseEntity<ProblemDetail> conflicto(ConflictoException ex) {
-		return of(problem(HttpStatus.CONFLICT, ex.getTitulo(), "La operación viola una regla de negocio."));
+		ProblemDetail problem = problem(HttpStatus.CONFLICT, ex.getTitulo(), "La operación viola una regla de negocio.");
+		if (ex.getCodigo() != null) {
+			problem.setProperty("codigo", ex.getCodigo());
+		}
+		return of(problem);
+	}
+
+	/** Edicion concurrente detectada por {@code @Version}: 409 generico, sin nombrar la entidad ni el id. */
+	@ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+	ResponseEntity<ProblemDetail> edicionConcurrente(ObjectOptimisticLockingFailureException ex) {
+		return of(problem(HttpStatus.CONFLICT, "Edición concurrente",
+				"El recurso cambió mientras se editaba. Volvé a cargarlo."));
+	}
+
+	@ExceptionHandler(ProfesionalNoVinculadoException.class)
+	ResponseEntity<ProblemDetail> profesionalNoVinculado(ProfesionalNoVinculadoException ex) {
+		ProblemDetail problem = problem(HttpStatus.UNPROCESSABLE_ENTITY, "Profesional no vinculado",
+				"El usuario no está vinculado a un profesional activo.");
+		problem.setProperty("codigo", ex.getCodigo());
+		return of(problem);
 	}
 
 	@ExceptionHandler(ReferenciaInvalidaException.class)

@@ -253,7 +253,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/09_decisiones_y_supuestos.md` §DD-06
 
 ### [C-08] `ficha-clinica-consentimiento`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (verificación técnica en H2, 2026-11-24); pendiente verificación manual contra MySQL 8.4, PR y review de integrante-1/2. Evidencia: backend 623/623 con `./gradlew test` (línea base 545; 78 tests nuevos: regla pura de versión, códigos de error, consultas nuevas con aislamiento A/B, consentimiento con versión inexistente o no vigente, ficha sin/con consentimiento, ficha vacía, CREATE/UPDATE con `version`, carreras de guardado y de primera carga, notas con profesional vinculado, inmutables y paginadas, RECEPCION 403 en los 7 endpoints, aislamiento A/B, fail-closed sin mocks, reflexión "ningún `@Audited` readOnly" y logs sin datos de salud); JaCoCo `paciente.ficha` 99 % de instrucciones; sin migraciones ni dependencias nuevas; `agenda/` sin cambios. Spec nueva: `clinical-record` (change `openspec/changes/c-08-ficha-clinica-consentimiento`). Handoff: `knowledge-base/entrega/C-08.md`
 - **Resultado**: ficha/anamnesis y notas solo editables con consentimiento registrado; cada lectura y escritura queda en AuditLog; RECEPCION sin acceso.
 - **Scope**:
   - `/api/pacientes/{id}/ficha` (GET/PUT), `/api/pacientes/{id}/notas` (POST/GET), `/api/pacientes/{id}/consentimientos` (POST; versión de texto, aceptado_en, registrado_por).

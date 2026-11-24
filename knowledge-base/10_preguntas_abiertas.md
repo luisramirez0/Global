@@ -33,8 +33,8 @@ Ver R-01.
 | PA-04 | Alta | Cumplimiento legal: plazo de conservación de HC (Ley 26.529), registro en AAIP, responsable de la base | Lanzamiento comercial | Asesoría legal |
 | PA-05 | Media | Modelo comercial (gratis con límites, suscripción ARS/USD) | Etapa comercial | Equipo |
 | PA-06 | Media | Residencia de datos y hosting gratuito para producción | Despliegue | Equipo técnico |
-| PA-07 | Media | ¿La recepcionista ve la ficha clínica o solo datos administrativos? | RBAC | Product owner |
-| PA-08 | Media | Política de edición de notas clínicas (adenda vs edición) | Ficha | Product owner / legal |
+| PA-07 | Media | ¿La recepcionista ve la ficha clínica o solo datos administrativos? Supuesto aplicado en C-08 (2026-11-24): `RECEPCION` sin acceso a ficha, notas ni consentimientos (`403`); cambiarlo es ajustar `Permisos.GESTION` en `paciente/ficha` y sus lecturas quedarían auditadas | RBAC | Product owner |
+| PA-08 | Media | Política de edición de notas clínicas (adenda vs edición). Supuesto aplicado en C-08 (2026-11-24): notas inmutables (sin edición ni borrado); una corrección es una nota nueva, sin enlace a la anterior. Una adenda enlazada o la edición dentro de un plazo requieren migración nueva | Ficha | Product owner / legal |
 | PA-09 | Media | Hosting gratuito aceptable para la demo (local, Docker, free tier) | Entrega | Equipo técnico |
 | PA-10 | Media | ~~JWT vs sesión por cookie~~ Resuelta 2026-11-23 (C-03): JWT Bearer sin refresh en el MVP, ver DD-04 | Seguridad | Equipo técnico |
 | PA-11 | Baja | Roles/estructura del equipo de 5 (frontend, backend, QA, etc.) | Reparto | Equipo |
