@@ -1,9 +1,12 @@
+import type { AgendaConfigApi } from '../api/agendaConfig';
 import type { AuthApi } from '../api/auth';
 import type { Session } from '../state/session';
 
 /** Lo que recibe cada página (design D3). C-11..C-15 lo amplían con sus clientes de API. */
 export interface PageContext {
   api: AuthApi;
+  /** Configuración de agenda (C-11). */
+  agenda: AgendaConfigApi;
   session: Session;
   navigate(path: string): void;
   flash: Flash;

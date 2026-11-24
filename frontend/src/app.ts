@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './api/config';
+import { createAgendaConfigApi } from './api/agendaConfig';
 import { createAuthApi } from './api/auth';
 import { createHttpClient } from './api/http';
 import { createLayout } from './components/layout';
@@ -44,13 +45,14 @@ export function mountApp(doc: Document, title: string = DEFAULT_TITLE, deps: Par
     onUnauthorized: () => session.end('unauthorized'),
   });
   const api = createAuthApi(http);
+  const agenda = createAgendaConfigApi(http);
   const flash = createFlash();
 
   const layout = createLayout({ appName: title, navItems: NAV_ITEMS, onLogout: () => session.end('logout') });
   root.replaceChildren(layout.root);
 
   let router: Router | null = null;
-  const context: PageContext = { api, session, flash, navigate: (path) => router?.navigate(path) };
+  const context: PageContext = { api, agenda, session, flash, navigate: (path) => router?.navigate(path) };
   router = createRouter({
     win,
     outlet: layout.main,

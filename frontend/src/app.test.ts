@@ -166,3 +166,32 @@ describe('login de punta a punta con la API simulada', () => {
     expect(document.querySelector('header')?.textContent).toContain('Ana');
   });
 });
+
+describe('configuración de agenda (C-11)', () => {
+  it('el menú ofrece "Configuración" y la pantalla pide los sillones con el token', async () => {
+    storeSession();
+    window.history.replaceState(null, '', '#/config/sillones');
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(200, ME_OK))
+      .mockResolvedValueOnce(jsonResponse(200, [{ id: 1, nombre: 'Sillón 1', activo: true }]));
+    await mount(fetchFn).ready;
+    const link = document.querySelector('nav[aria-label="Principal"] a[href="#/config/sillones"]');
+    expect(link?.textContent).toBe('Configuración');
+    expect(main().querySelector('h1')?.textContent).toBe('Sillones');
+    await vi.waitFor(() => expect(main().textContent).toContain('Sillón 1'));
+    expect(fetchFn.mock.calls[1]?.[0]).toBe('http://api.test/api/sillones');
+    expect(new Headers(fetchFn.mock.calls[1]?.[1]?.headers).get('Authorization')).toBe('Bearer t1');
+  });
+
+  it.each(['/config/sillones', '/config/prestaciones', '/config/horarios', '/config/bloqueos'])(
+    'sin sesión %s redirige al login sin pedir datos',
+    async (path) => {
+      window.history.replaceState(null, '', `#${path}`);
+      const fetchFn = vi.fn<typeof fetch>();
+      await mount(fetchFn).ready;
+      expect(window.location.hash).toBe('#/login');
+      expect(fetchFn).not.toHaveBeenCalled();
+    },
+  );
+});

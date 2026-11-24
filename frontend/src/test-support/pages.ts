@@ -1,8 +1,13 @@
 /** Utilidades de test para páginas (solo se importan desde *.test.ts). */
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
+import type { AgendaConfigApi } from '../api/agendaConfig';
 import type { AuthApi } from '../api/auth';
+import type { MeResponse, Rol } from '../api/types';
 import { createFlash, type PageContext } from '../pages/context';
 import { createSession } from '../state/session';
+
+/** Cada método de la API de agenda como `vi.fn` tipado (C-11). */
+export type AgendaMock = { [K in keyof AgendaConfigApi]: Mock<AgendaConfigApi[K]> };
 
 export interface TestContext extends PageContext {
   api: {
@@ -10,16 +15,75 @@ export interface TestContext extends PageContext {
     login: ReturnType<typeof vi.fn<AuthApi['login']>>;
     me: ReturnType<typeof vi.fn<AuthApi['me']>>;
   };
+  agenda: AgendaMock;
   navigate: ReturnType<typeof vi.fn<(path: string) => void>>;
+}
+
+function createAgendaMock(): AgendaMock {
+  return {
+    listarSillones: vi.fn<AgendaConfigApi['listarSillones']>(),
+    crearSillon: vi.fn<AgendaConfigApi['crearSillon']>(),
+    editarSillon: vi.fn<AgendaConfigApi['editarSillon']>(),
+    borrarSillon: vi.fn<AgendaConfigApi['borrarSillon']>(),
+    listarPrestaciones: vi.fn<AgendaConfigApi['listarPrestaciones']>(),
+    crearPrestacion: vi.fn<AgendaConfigApi['crearPrestacion']>(),
+    editarPrestacion: vi.fn<AgendaConfigApi['editarPrestacion']>(),
+    borrarPrestacion: vi.fn<AgendaConfigApi['borrarPrestacion']>(),
+    listarHorarios: vi.fn<AgendaConfigApi['listarHorarios']>(),
+    crearHorario: vi.fn<AgendaConfigApi['crearHorario']>(),
+    editarHorario: vi.fn<AgendaConfigApi['editarHorario']>(),
+    borrarHorario: vi.fn<AgendaConfigApi['borrarHorario']>(),
+    listarBloqueos: vi.fn<AgendaConfigApi['listarBloqueos']>(),
+    crearBloqueo: vi.fn<AgendaConfigApi['crearBloqueo']>(),
+    editarBloqueo: vi.fn<AgendaConfigApi['editarBloqueo']>(),
+    borrarBloqueo: vi.fn<AgendaConfigApi['borrarBloqueo']>(),
+  };
 }
 
 export function createTestContext(): TestContext {
   return {
     api: { register: vi.fn<AuthApi['register']>(), login: vi.fn<AuthApi['login']>(), me: vi.fn<AuthApi['me']>() },
+    agenda: createAgendaMock(),
     session: createSession({ storage: sessionStorage, now: () => Date.now() }),
     navigate: vi.fn<(path: string) => void>(),
     flash: createFlash(),
   };
+}
+
+/** Contexto con sesión iniciada y perfil del rol indicado (datos ficticios). */
+export function createLoggedContext(rol: Rol): TestContext {
+  const ctx = createTestContext();
+  ctx.session.start('token-de-prueba', 1800);
+  const profile: MeResponse = {
+    usuario: { id: 2, nombre: 'Ana', email: 'ana@consultorio.test', rol },
+    consultorio: { id: 2, nombre: 'Consultorio Sonrisas' },
+  };
+  ctx.session.setProfile(profile);
+  return ctx;
+}
+
+export function select(root: ParentNode, name: string): HTMLSelectElement {
+  const el = root.querySelector(`select[name="${name}"]`);
+  if (!(el instanceof HTMLSelectElement)) throw new Error(`No existe el select ${name}`);
+  return el;
+}
+
+/** Botones cuyo texto visible es exactamente `text`. */
+export function buttons(root: ParentNode, text: string): HTMLButtonElement[] {
+  return [...root.querySelectorAll('button')].filter((b) => b.textContent === text);
+}
+
+/** El único botón con ese `aria-label` (p. ej. "Editar Sillón 1"). */
+export function buttonLabeled(root: ParentNode, label: string): HTMLButtonElement {
+  const found = [...root.querySelectorAll('button')].filter((b) => b.getAttribute('aria-label') === label);
+  if (found.length !== 1 || found[0] === undefined) throw new Error(`Se esperaba un botón "${label}" y hay ${found.length}`);
+  return found[0];
+}
+
+/** Deja correr promesas resueltas y sus `then` encadenados. */
+export async function flush(): Promise<void> {
+  for (let i = 0; i < 5; i += 1) await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 export function input(root: ParentNode, name: string): HTMLInputElement {
