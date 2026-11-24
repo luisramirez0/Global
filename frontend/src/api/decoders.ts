@@ -1,5 +1,16 @@
 import { ApiError } from './errors';
-import { ROLES, type LoginResponse, type MeResponse, type RegistroResponse, type Rol } from './types';
+import {
+  ROLES,
+  type Bloqueo,
+  type DiaSemana,
+  type Horario,
+  type LoginResponse,
+  type MeResponse,
+  type Prestacion,
+  type RegistroResponse,
+  type Rol,
+  type Sillon,
+} from './types';
 
 /** Decodificadores de respuestas: narrowing de `unknown`, sin `as` sobre JSON crudo (regla 4). */
 
@@ -60,5 +71,81 @@ export function decodeMe(value: unknown): MeResponse {
   return {
     usuario: { id: id(u, 'id'), nombre: str(u, 'nombre'), email: str(u, 'email'), rol: rol(u, 'rol') },
     consultorio: { id: id(c, 'id'), nombre: str(c, 'nombre') },
+  };
+}
+
+/* Configuración de agenda (C-04). */
+
+function bool(o: Obj, key: string): boolean {
+  const v = o[key];
+  if (typeof v !== 'boolean') fail();
+  return v;
+}
+
+function idOrNull(o: Obj, key: string): number | null {
+  return o[key] === null || o[key] === undefined ? null : id(o, key);
+}
+
+function strOrNull(o: Obj, key: string): string | null {
+  return o[key] === null || o[key] === undefined ? null : str(o, key);
+}
+
+function hhmm(o: Obj, key: string): string {
+  const v = str(o, key);
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) fail();
+  return v;
+}
+
+/** Instant de Java (ISO-8601 con zona): nunca una fecha local ambigua. */
+function instant(o: Obj, key: string): string {
+  const v = str(o, key);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/.test(v) || Number.isNaN(Date.parse(v))) fail();
+  return v;
+}
+
+function diaSemana(o: Obj, key: string): DiaSemana {
+  const v = o[key];
+  if (v === 1 || v === 2 || v === 3 || v === 4 || v === 5 || v === 6 || v === 7) return v;
+  return fail();
+}
+
+export function listOf<T>(decode: (value: unknown) => T): (value: unknown) => T[] {
+  return (value) => {
+    if (!Array.isArray(value)) fail();
+    return value.map((item: unknown) => decode(item));
+  };
+}
+
+export function decodeSillon(value: unknown): Sillon {
+  const o = obj(value);
+  return { id: id(o, 'id'), nombre: str(o, 'nombre'), activo: bool(o, 'activo') };
+}
+
+export function decodePrestacion(value: unknown): Prestacion {
+  const o = obj(value);
+  // `id` exige un entero seguro positivo: sirve también para la duración.
+  return { id: id(o, 'id'), nombre: str(o, 'nombre'), duracionMinutos: id(o, 'duracionMinutos'), activo: bool(o, 'activo') };
+}
+
+export function decodeHorario(value: unknown): Horario {
+  const o = obj(value);
+  return {
+    id: id(o, 'id'),
+    profesionalId: id(o, 'profesionalId'),
+    diaSemana: diaSemana(o, 'diaSemana'),
+    horaDesde: hhmm(o, 'horaDesde'),
+    horaHasta: hhmm(o, 'horaHasta'),
+  };
+}
+
+export function decodeBloqueo(value: unknown): Bloqueo {
+  const o = obj(value);
+  return {
+    id: id(o, 'id'),
+    sillonId: idOrNull(o, 'sillonId'),
+    profesionalId: idOrNull(o, 'profesionalId'),
+    inicio: instant(o, 'inicio'),
+    fin: instant(o, 'fin'),
+    motivo: strOrNull(o, 'motivo'),
   };
 }

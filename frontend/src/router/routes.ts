@@ -1,4 +1,9 @@
 import type { NavItem } from '../components/layout';
+import { renderBloqueos } from '../pages/config/bloqueos';
+import { renderHorarios } from '../pages/config/horarios';
+import { CONFIG_HOME } from '../pages/config/nav';
+import { renderPrestaciones } from '../pages/config/prestaciones';
+import { renderSillones } from '../pages/config/sillones';
 import type { PageContext } from '../pages/context';
 import { renderInicio } from '../pages/inicio/inicio';
 import { renderLogin } from '../pages/login/login';
@@ -16,6 +21,14 @@ export const ROUTES: readonly Route<PageContext>[] = [
   { path: LOGIN_PATH, guestOnly: true, render: renderLogin },
   { path: '/registro', guestOnly: true, render: renderRegistro },
   { path: HOME_PATH, render: renderInicio },
+  // Configuración de agenda (C-11).
+  { path: '/config/sillones', render: renderSillones },
+  { path: '/config/prestaciones', render: renderPrestaciones },
+  { path: '/config/horarios', render: renderHorarios },
+  { path: '/config/bloqueos', render: renderBloqueos },
 ];
 
-export const NAV_ITEMS: readonly NavItem[] = [{ path: HOME_PATH, label: 'Inicio' }];
+export const NAV_ITEMS: readonly NavItem[] = [
+  { path: HOME_PATH, label: 'Inicio' },
+  { path: CONFIG_HOME, label: 'Configuración' },
+];
