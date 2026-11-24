@@ -187,7 +187,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
 ## FASE 2 — Backend de dominio (5 lanes tras GATE 3)
 
 ### [C-04] `consultorio-config-api`
-- **Estado**: `[x]` completado (pendiente de merge del PR). Evidencia: backend 361/361 con `./gradlew cleanTest test` (línea base 264; CRUD de los cuatro recursos, duración fuera de grilla, límite y último sillón activo, solapamiento de franjas, bloqueos por sillón/profesional, RBAC por rol, aislamiento A/B y concurrencia con dos hilos); sin migraciones nuevas. Grilla de 15 min provisional, pendiente de validar con un odontólogo (PA-03). Handoff: `knowledge-base/entrega/C-04.md`
+- **Estado**: `[x]` completado, mergeado en PR #7 (merge `98db080`) y archivado en `openspec/changes/archive/2026-11-23-c-04-consultorio-config-api`. Evidencia: backend 370/370 con `./gradlew cleanTest test` (línea base 264; CRUD de los cuatro recursos, duración fuera de grilla, límite y último sillón activo, solapamiento de franjas, bloqueos por sillón/profesional, RBAC por rol, aislamiento A/B y concurrencia con dos hilos); sin migraciones nuevas. Grilla de 15 min provisional, pendiente de validar con un odontólogo (PA-03). Handoff: `knowledge-base/entrega/C-04.md`
 - **Resultado**: un odontólogo autenticado administra sillones, prestaciones, horarios y bloqueos vía API, con validaciones.
 - **Scope**:
   - CRUD `/api/sillones` (1–2), `/api/prestaciones` (duración múltiplo de la grilla, RN-AG-03), `/api/horarios-atencion`, `/api/bloqueos` (US-002, US-013).
