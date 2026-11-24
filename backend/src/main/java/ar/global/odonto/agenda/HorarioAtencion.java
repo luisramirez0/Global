@@ -42,6 +42,10 @@ public class HorarioAtencion extends TenantEntity {
 		return profesional;
 	}
 
+	public void setProfesional(Profesional profesional) {
+		this.profesional = profesional;
+	}
+
 	public int getDiaSemana() {
 		return diaSemana;
 	}

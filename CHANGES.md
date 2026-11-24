@@ -187,11 +187,11 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
 ## FASE 2 — Backend de dominio (5 lanes tras GATE 3)
 
 ### [C-04] `consultorio-config-api`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (pendiente de merge del PR). Evidencia: backend 361/361 con `./gradlew cleanTest test` (línea base 264; CRUD de los cuatro recursos, duración fuera de grilla, límite y último sillón activo, solapamiento de franjas, bloqueos por sillón/profesional, RBAC por rol, aislamiento A/B y concurrencia con dos hilos); sin migraciones nuevas. Grilla de 15 min provisional, pendiente de validar con un odontólogo (PA-03). Handoff: `knowledge-base/entrega/C-04.md`
 - **Resultado**: un odontólogo autenticado administra sillones, prestaciones, horarios y bloqueos vía API, con validaciones.
 - **Scope**:
   - CRUD `/api/sillones` (1–2), `/api/prestaciones` (duración múltiplo de la grilla, RN-AG-03), `/api/horarios-atencion`, `/api/bloqueos` (US-002, US-013).
-  - DTOs + mappers + Bean Validation; RBAC (RECEPCION solo lectura en config).
+  - DTOs + mappers + Bean Validation; RBAC (RECEPCION solo lectura en sillones, prestaciones y horarios; en bloqueos puede consultar, crear y editar, pero no eliminar — KB 03 y spec `access-control`).
   - Tests: CRUD, duración inválida, bloqueo por sillón/profesional, aislamiento tenant.
 - **Dependencias**: `C-03`
 - **Zona**: `backend/src/main/java/.../agenda/{sillon,prestacion,horario,bloqueo}/`, `backend/src/test/.../agenda/config/`
