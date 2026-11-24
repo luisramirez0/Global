@@ -44,6 +44,34 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		return ResponseEntity.badRequest().body(problem);
 	}
 
+	@ExceptionHandler(ValidacionException.class)
+	ResponseEntity<ProblemDetail> validacion(ValidacionException ex) {
+		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Datos inválidos",
+				"La solicitud tiene campos inválidos.");
+		problem.setProperty("errores", List.of(Map.of("campo", ex.getCampo(), "mensaje", ex.getMensaje())));
+		return of(problem);
+	}
+
+	@ExceptionHandler(RecursoNoEncontradoException.class)
+	ResponseEntity<ProblemDetail> noEncontrado(RecursoNoEncontradoException ex) {
+		ProblemDetail problem = problem(HttpStatus.NOT_FOUND, "Recurso no encontrado",
+				"El recurso solicitado no existe.");
+		return of(problem);
+	}
+
+	@ExceptionHandler(ConflictoException.class)
+	ResponseEntity<ProblemDetail> conflicto(ConflictoException ex) {
+		return of(problem(HttpStatus.CONFLICT, ex.getTitulo(), "La operación viola una regla de negocio."));
+	}
+
+	@ExceptionHandler(ReferenciaInvalidaException.class)
+	ResponseEntity<ProblemDetail> referenciaInvalida(ReferenciaInvalidaException ex) {
+		ProblemDetail problem = problem(HttpStatus.UNPROCESSABLE_ENTITY, "Referencia inválida",
+				"La solicitud referencia un recurso inexistente o no permitido.");
+		problem.setProperty("errores", List.of(Map.of("campo", ex.getCampo(), "mensaje", "referencia inválida")));
+		return of(problem);
+	}
+
 	@ExceptionHandler(EmailYaRegistradoException.class)
 	ResponseEntity<ProblemDetail> emailDuplicado(EmailYaRegistradoException ex) {
 		return of(problem(HttpStatus.CONFLICT, "Email ya registrado", ex.getMessage()));
@@ -92,6 +120,8 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 	private static ProblemDetail problem(HttpStatus status, String title, String detail) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
 		problem.setTitle(title);
+		// Spring completaria "instance" con la ruta pedida, que puede contener el id consultado: se neutraliza.
+		problem.setInstance(java.net.URI.create("about:blank"));
 		return problem;
 	}
 
