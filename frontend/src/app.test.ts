@@ -1,30 +1,168 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mountApp } from './app';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ME_OK, jsonResponse, problemResponse } from './api/__fixtures__/auth';
+import { mountApp, MSG_SESSION_EXPIRED, type App } from './app';
+import { SESSION_KEY } from './state/session';
+
+let app: App | null = null;
+
+function storeSession(msFromNow = 600_000): void {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: 't1', expiresAt: Date.now() + msFromNow }));
+}
+
+function mount(fetchFn: typeof fetch, title?: string): App {
+  app = mountApp(document, title, { fetchFn, baseUrl: 'http://api.test/api' });
+  return app;
+}
+
+function main(): HTMLElement {
+  const el = document.querySelector('main');
+  if (el === null) throw new Error('sin main');
+  return el;
+}
+
+beforeEach(() => {
+  document.body.innerHTML = '<div id="app"></div>';
+  window.history.replaceState(null, '', '/');
+});
+
+afterEach(() => {
+  app?.destroy();
+  app = null;
+  document.body.innerHTML = '';
+  sessionStorage.clear();
+  vi.useRealTimers();
+});
 
 describe('mountApp', () => {
-  beforeEach(() => {
-    document.body.innerHTML = '<div id="app"></div>';
+  it('sin sesión monta el layout con el nombre del producto y la página de login', async () => {
+    const fetchFn = vi.fn<typeof fetch>();
+    await mount(fetchFn).ready;
+    expect(document.querySelector('#app header')?.textContent).toContain('Global');
+    expect(main().querySelector('h1')?.textContent).toBe('Iniciar sesión');
+    expect(window.location.hash).toBe('#/login');
+    expect(document.title).toBe('Iniciar sesión · Global');
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
-  afterEach(() => {
-    document.body.innerHTML = '';
-  });
-
-  it('monta un unico h1 con el nombre del producto', () => {
-    mountApp(document);
-    const headings = document.querySelectorAll('#app h1');
-    expect(headings).toHaveLength(1);
-    expect(headings[0]?.textContent).toBe('Global');
-  });
-
-  it('muestra un titulo malicioso como texto literal, sin crear nodos', () => {
-    mountApp(document, '<img src=x onerror=alert(1)>');
-    expect(document.querySelector('h1')?.textContent).toBe('<img src=x onerror=alert(1)>');
+  it('muestra un nombre de producto malicioso como texto literal, sin crear nodos', async () => {
+    await mount(vi.fn<typeof fetch>(), '<img src=x onerror=alert(1)>').ready;
+    expect(document.querySelector('header')?.textContent).toContain('<img src=x onerror=alert(1)>');
     expect(document.querySelector('img')).toBeNull();
   });
 
   it('lanza un Error descriptivo si falta el contenedor #app', () => {
     document.body.innerHTML = '';
     expect(() => mountApp(document)).toThrowError(/#app/);
+  });
+});
+
+describe('sesión restaurada', () => {
+  it('muestra carga, obtiene el perfil con me() y renderiza inicio', async () => {
+    storeSession();
+    window.history.replaceState(null, '', '#/inicio');
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK));
+    const mounted = mount(fetchFn);
+    expect(main().querySelector('[role="status"]')?.textContent).toBe('Cargando…');
+    await mounted.ready;
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(fetchFn.mock.calls[0]?.[0]).toBe('http://api.test/api/auth/me');
+    expect(new Headers(fetchFn.mock.calls[0]?.[1]?.headers).get('Authorization')).toBe('Bearer t1');
+    expect(window.location.hash).toBe('#/inicio');
+    expect(main().querySelector('h1')?.textContent).toBe('Hola, Ana');
+    expect(document.querySelector('header')?.textContent).toContain('Consultorio Sonrisas');
+  });
+
+  it('con la API caída ofrece reintentar sin borrar la sesión', async () => {
+    storeSession();
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(jsonResponse(200, ME_OK));
+    await mount(fetchFn).ready;
+    const alert = main().querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('No se pudo conectar con el servidor.');
+    expect(sessionStorage.getItem(SESSION_KEY)).not.toBeNull();
+    const retry = [...main().querySelectorAll('button')].find((b) => b.textContent === 'Reintentar');
+    retry?.click();
+    await vi.waitFor(() => expect(main().querySelector('h1')?.textContent).toBe('Hola, Ana'));
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('me() con 401 cierra la sesión y muestra el login con aviso', async () => {
+    storeSession();
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(problemResponse(401));
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/login');
+    expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
+    expect(main().querySelector('[role="status"]')?.textContent).toBe(MSG_SESSION_EXPIRED);
+  });
+});
+
+describe('cierre de sesión', () => {
+  it('Cerrar sesión borra la sesión, va a login y no hace requests', async () => {
+    storeSession();
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK));
+    await mount(fetchFn).ready;
+    const logout = [...document.querySelectorAll('header button')].find((b) => b.textContent === 'Cerrar sesión');
+    expect(logout).toBeDefined();
+    (logout as HTMLButtonElement).click();
+    expect(window.location.hash).toBe('#/login');
+    expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
+    expect(document.querySelector('header')?.textContent).not.toContain('Ana');
+    expect(main().querySelector('[role="status"]')).toBeNull(); // sin aviso de vencimiento
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('al vencer el token vuelve al login con aviso', async () => {
+    vi.useFakeTimers();
+    storeSession(60_000);
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK));
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/inicio');
+    vi.advanceTimersByTime(30_000);
+    expect(window.location.hash).toBe('#/login');
+    expect(main().querySelector('[role="status"]')?.textContent).toBe(MSG_SESSION_EXPIRED);
+  });
+
+  it('volver atrás tras cerrar sesión no muestra inicio', async () => {
+    storeSession();
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK));
+    await mount(fetchFn).ready;
+    (document.querySelector('header button') as HTMLButtonElement).click();
+    window.history.replaceState(null, '', '#/inicio'); // simula la entrada anterior del historial
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(window.location.hash).toBe('#/login');
+    expect(main().querySelector('h1')?.textContent).toBe('Iniciar sesión');
+  });
+});
+
+describe('login de punta a punta con la API simulada', () => {
+  it('login → me → inicio, con el token en sessionStorage y el perfil fuera de él', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          accessToken: 'tok',
+          tokenType: 'Bearer',
+          expiresIn: 1800,
+          usuario: { id: 2, nombre: 'Ana', rol: 'ADMIN' },
+          consultorioId: 2,
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse(200, ME_OK));
+    await mount(fetchFn).ready;
+    const email = main().querySelector<HTMLInputElement>('input[name="email"]');
+    const password = main().querySelector<HTMLInputElement>('input[name="password"]');
+    if (email === null || password === null) throw new Error('sin campos');
+    email.value = 'ana@consultorio.test';
+    password.value = 'Segura123!';
+    main().querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
+    await vi.waitFor(() => expect(window.location.hash).toBe('#/inicio'));
+    expect(new Headers(fetchFn.mock.calls[0]?.[1]?.headers).has('Authorization')).toBe(false);
+    expect(new Headers(fetchFn.mock.calls[1]?.[1]?.headers).get('Authorization')).toBe('Bearer tok');
+    const raw = sessionStorage.getItem(SESSION_KEY) ?? '';
+    expect(raw).toContain('tok');
+    expect(raw).not.toContain('ana@consultorio.test');
+    expect(document.querySelector('header')?.textContent).toContain('Ana');
   });
 });

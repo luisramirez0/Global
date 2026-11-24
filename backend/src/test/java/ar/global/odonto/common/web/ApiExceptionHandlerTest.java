@@ -113,6 +113,48 @@ class ApiExceptionHandlerTest {
 	}
 
 	@Test
+	void notFoundIs404WithoutEchoingTheId() throws Exception {
+		var response = mockMvc.perform(get("/t/404/987654")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(404);
+		assertProblem(response);
+		assertThat(response.getContentAsString()).doesNotContain("987654").doesNotContain("at ar.global");
+	}
+
+	@Test
+	void configurationConflictIs409WithGenericTitle() throws Exception {
+		var response = mockMvc.perform(get("/t/409-conflicto")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(409);
+		assertProblem(response);
+		assertThat(mapper.readTree(response.getContentAsString()).get("title").asText())
+				.isEqualTo("Límite de sillones");
+	}
+
+	@Test
+	void invalidReferenceIs422NamingTheFieldWithoutValues() throws Exception {
+		var response = mockMvc.perform(get("/t/422")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(422);
+		assertProblem(response);
+		JsonNode body = mapper.readTree(response.getContentAsString());
+		assertThat(body.get("errores").findValuesAsText("campo")).containsExactly("sillonId");
+		assertThat(response.getContentAsString()).doesNotContain("555");
+	}
+
+	@Test
+	void crossFieldValidationIs400WithSameFormatAsBeanValidation() throws Exception {
+		var response = mockMvc.perform(get("/t/400-regla")).andReturn().getResponse();
+
+		assertThat(response.getStatus()).isEqualTo(400);
+		assertProblem(response);
+		JsonNode body = mapper.readTree(response.getContentAsString());
+		assertThat(body.get("errores").get(0).get("campo").asText()).isEqualTo("horaHasta");
+		assertThat(body.get("errores").get(0).get("mensaje").asText()).isNotBlank();
+		assertThat(response.getContentAsString()).doesNotContain("13:00");
+	}
+
+	@Test
 	void notFoundIs404Generic() throws Exception {
 		var response = mockMvc.perform(get("/t/404")).andReturn().getResponse();
 
@@ -147,6 +189,7 @@ class ApiExceptionHandlerTest {
 		assertThat(response.getStatus()).isEqualTo(400);
 		assertProblem(response);
 		assertThat(response.getContentAsString()).doesNotContain("abc-secreto");
+		assertThat(mapper.readTree(response.getContentAsString()).get("instance").asText()).isEqualTo("about:blank");
 	}
 
 	@Test
@@ -181,6 +224,26 @@ class ApiExceptionHandlerTest {
 			throw new EmailYaRegistradoException();
 		}
 
+		@GetMapping("/t/404/{id}")
+		void notFound(@org.springframework.web.bind.annotation.PathVariable Long id) {
+			throw new RecursoNoEncontradoException();
+		}
+
+		@GetMapping("/t/409-conflicto")
+		void conflicto() {
+			throw new ConflictoException("Límite de sillones");
+		}
+
+		@GetMapping("/t/422")
+		void referencia() {
+			throw new ReferenciaInvalidaException("sillonId");
+		}
+
+		@GetMapping("/t/400-regla")
+		void regla() {
+			throw new ValidacionException("horaHasta", "debe ser posterior a horaDesde");
+		}
+
 		@GetMapping("/t/401")
 		void unauthorized() {
 			throw new CredencialesInvalidasException();
@@ -207,7 +270,7 @@ class ApiExceptionHandlerTest {
 		}
 
 		@GetMapping("/t/404")
-		void notFound() {
+		void notFoundGenerico() {
 			throw new RecursoNoEncontradoException();
 		}
 

@@ -71,7 +71,7 @@ En `ApiExceptionHandler` (zona de revisión, regla 12):
 - `common.web.RecursoNoEncontradoException` → `404` "Recurso no encontrado", sin id ni tipo de entidad en el detalle. Inexistente y "de otro consultorio" son indistinguibles (control IDOR real, C-02 design D2).
 - `DniDuplicadoException` → `409` con `pacienteId`.
 - `DatoInvalidoException(campo)` → `400` con `errores[{campo, mensaje}]`, como Bean Validation.
-- Un id no numérico (`/api/pacientes/abc`) y un JSON mal formado (fecha inválida) devuelven `400` sin eco del valor. El handler por defecto de `TypeMismatchException` repetía el valor en `detail` **y** en `instance` (la URI); se sobrescribe para responder `errores[{campo}]` y usar como `instance` el patrón de la ruta (`/api/pacientes/%7Bid%7D`).
+- Un id no numérico (`/api/pacientes/abc`) y un JSON mal formado (fecha inválida) devuelven `400` sin eco del valor. El handler por defecto de `TypeMismatchException` repetía el valor en `detail` **y** en `instance` (la URI); se sobrescribe para responder `errores[{campo}]` con `instance` en `about:blank`, igual que el resto de los errores de `ApiExceptionHandler` desde C-04.
 - `RecursoNoEncontradoException` es genérica para que C-04/C-07/C-08 la reutilicen; si C-04 llega antes con una equivalente, se usa esa (coordinar con Integrante 4).
 
 ### D8 — Paquetes

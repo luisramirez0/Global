@@ -187,11 +187,11 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
 ## FASE 2 — Backend de dominio (5 lanes tras GATE 3)
 
 ### [C-04] `consultorio-config-api`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado, mergeado en PR #7 (merge `98db080`) y archivado en `openspec/changes/archive/2026-11-23-c-04-consultorio-config-api`. Evidencia: backend 370/370 con `./gradlew cleanTest test` (línea base 264; CRUD de los cuatro recursos, duración fuera de grilla, límite y último sillón activo, solapamiento de franjas, bloqueos por sillón/profesional, RBAC por rol, aislamiento A/B y concurrencia con dos hilos); sin migraciones nuevas. Grilla de 15 min provisional, pendiente de validar con un odontólogo (PA-03). Handoff: `knowledge-base/entrega/C-04.md`
 - **Resultado**: un odontólogo autenticado administra sillones, prestaciones, horarios y bloqueos vía API, con validaciones.
 - **Scope**:
   - CRUD `/api/sillones` (1–2), `/api/prestaciones` (duración múltiplo de la grilla, RN-AG-03), `/api/horarios-atencion`, `/api/bloqueos` (US-002, US-013).
-  - DTOs + mappers + Bean Validation; RBAC (RECEPCION solo lectura en config).
+  - DTOs + mappers + Bean Validation; RBAC (RECEPCION solo lectura en sillones, prestaciones y horarios; en bloqueos puede consultar, crear y editar, pero no eliminar — KB 03 y spec `access-control`).
   - Tests: CRUD, duración inválida, bloqueo por sillón/profesional, aislamiento tenant.
 - **Dependencias**: `C-03`
 - **Zona**: `backend/src/main/java/.../agenda/{sillon,prestacion,horario,bloqueo}/`, `backend/src/test/.../agenda/config/`
@@ -203,7 +203,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/06_funcionalidades.md` §US-002, §US-013
 
 ### [C-05] `pacientes-api`
-- **Estado**: `[x]` completado (verificación técnica; verificado a mano contra MySQL 8.4; pendiente de PR). Evidencia: backend 342/342 con `./gradlew test` (línea base 264; tests de alta, DNI duplicado con otro formato y en carrera, búsqueda por nombre y DNI, E.164 inválido, baja lógica y reactivación, RBAC por rol y aislamiento A/B en todos los endpoints); sin migraciones nuevas. Change: `openspec/changes/c-05-pacientes-api`. Handoff: `knowledge-base/entrega/C-05.md`
+- **Estado**: `[x]` completado (verificación técnica; verificado a mano contra MySQL 8.4; pendiente de PR). Evidencia: backend 342/342 con `./gradlew test` y 448/448 tras integrar `main` con C-04 (línea base 264; tests de alta, DNI duplicado con otro formato y en carrera, búsqueda por nombre y DNI, E.164 inválido, baja lógica y reactivación, RBAC por rol y aislamiento A/B en todos los endpoints); sin migraciones nuevas. Change: `openspec/changes/c-05-pacientes-api`. Handoff: `knowledge-base/entrega/C-05.md`
 - **Resultado**: ABM de pacientes con búsqueda por nombre/DNI, DNI único por consultorio y baja lógica.
 - **Scope**:
   - `/api/pacientes` (alta, edición, baja lógica, búsqueda `?q=`), validación de teléfono E.164 (para wa.me), DNI único (409).
@@ -294,7 +294,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
 > Riesgo XSS por ausencia de framework: prohibido `innerHTML` con datos de usuario en TODOS los changes de esta fase.
 
 ### [C-10] `frontend-shell-auth`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (cerrado por la persona el 2026-11-23 con el alcance implementado) — mergeado en PR #5 (merge `7814294`) y archivado en `openspec/changes/archive/2026-11-23-c-10-frontend-shell-auth`: `npm test` 210/210 (línea base 9), lint/typecheck/build limpios, sin cambios en `backend/` ni migraciones. Verificación manual contra la API real **parcial** (backend + MySQL 8 en Docker, health `UP`, CORS desde `:5173` OK; registro y login probados por la persona; no se completaron vencimiento ni 429). Recuperación de contraseña: fuera de alcance, propuesta como ficha nueva. Handoff: `knowledge-base/entrega/C-10.md`
 - **Resultado**: login/registro funcionales contra la API, rutas protegidas y cierre de sesión; cliente HTTP tipado reutilizable.
 - **Scope**:
   - `src/api/` cliente HTTP tipado (manejo 401/403/409/422, token según DD-04), `src/state/` sesión, router simple con guard, layout base.

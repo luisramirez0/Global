@@ -7,8 +7,6 @@ import ar.global.odonto.paciente.abm.DniDuplicadoException;
 import ar.global.odonto.security.DemasiadosIntentosException;
 import ar.global.odonto.usuario.auth.CredencialesInvalidasException;
 import jakarta.servlet.http.HttpServletRequest;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -24,10 +22,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
@@ -54,27 +50,14 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
 	/**
 	 * Parametro con tipo invalido (p. ej. {@code /api/pacientes/abc}). El handler por defecto repite el valor en
-	 * {@code detail} y en {@code instance} (la URI): se responde con el nombre del parametro y el patron de la ruta.
+	 * {@code detail} y en {@code instance}: se responde solo con el nombre del parametro e {@code instance}
+	 * neutralizado como en el resto de los errores.
 	 */
 	@Override
 	protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers,
 			HttpStatusCode status, WebRequest request) {
 		String campo = ex instanceof MethodArgumentTypeMismatchException m ? m.getName() : ex.getPropertyName();
-		ProblemDetail problem = invalidos(List.of(campo == null ? "parametro" : campo));
-		Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,
-				RequestAttributes.SCOPE_REQUEST);
-		problem.setInstance(instanciaSegura(pattern));
-		return ResponseEntity.badRequest().body(problem);
-	}
-
-	private static URI instanciaSegura(Object pattern) {
-		try {
-			// El constructor de varios argumentos codifica las llaves del patron ({id} -> %7Bid%7D).
-			return pattern instanceof String path ? new URI(null, null, path, null) : URI.create("about:blank");
-		}
-		catch (URISyntaxException ex) {
-			return URI.create("about:blank");
-		}
+		return ResponseEntity.badRequest().body(invalidos(List.of(campo == null ? "parametro" : campo)));
 	}
 
 	@ExceptionHandler(DatoInvalidoException.class)
@@ -82,15 +65,38 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		return of(invalidos(ex.getCampos()));
 	}
 
+	@ExceptionHandler(ValidacionException.class)
+	ResponseEntity<ProblemDetail> validacion(ValidacionException ex) {
+		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Datos inválidos",
+				"La solicitud tiene campos inválidos.");
+		problem.setProperty("errores", List.of(Map.of("campo", ex.getCampo(), "mensaje", ex.getMensaje())));
+		return of(problem);
+	}
+
 	@ExceptionHandler(RecursoNoEncontradoException.class)
 	ResponseEntity<ProblemDetail> noEncontrado(RecursoNoEncontradoException ex) {
-		return of(problem(HttpStatus.NOT_FOUND, "Recurso no encontrado", ex.getMessage()));
+		ProblemDetail problem = problem(HttpStatus.NOT_FOUND, "Recurso no encontrado",
+				"El recurso solicitado no existe.");
+		return of(problem);
 	}
 
 	@ExceptionHandler(DniDuplicadoException.class)
 	ResponseEntity<ProblemDetail> dniDuplicado(DniDuplicadoException ex) {
 		ProblemDetail problem = problem(HttpStatus.CONFLICT, "DNI ya registrado", ex.getMessage());
 		problem.setProperty("pacienteId", ex.getPacienteId());
+		return of(problem);
+	}
+
+	@ExceptionHandler(ConflictoException.class)
+	ResponseEntity<ProblemDetail> conflicto(ConflictoException ex) {
+		return of(problem(HttpStatus.CONFLICT, ex.getTitulo(), "La operación viola una regla de negocio."));
+	}
+
+	@ExceptionHandler(ReferenciaInvalidaException.class)
+	ResponseEntity<ProblemDetail> referenciaInvalida(ReferenciaInvalidaException ex) {
+		ProblemDetail problem = problem(HttpStatus.UNPROCESSABLE_ENTITY, "Referencia inválida",
+				"La solicitud referencia un recurso inexistente o no permitido.");
+		problem.setProperty("errores", List.of(Map.of("campo", ex.getCampo(), "mensaje", "referencia inválida")));
 		return of(problem);
 	}
 
@@ -151,6 +157,8 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 	private static ProblemDetail problem(HttpStatus status, String title, String detail) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
 		problem.setTitle(title);
+		// Spring completaria "instance" con la ruta pedida, que puede contener el id consultado: se neutraliza.
+		problem.setInstance(java.net.URI.create("about:blank"));
 		return problem;
 	}
 
