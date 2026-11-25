@@ -1,5 +1,5 @@
 import { ApiError } from '../../api/errors';
-import type { Consentimiento, TextoConsentimiento } from '../../api/types';
+import type { Consentimiento, Ficha, Nota, Pagina, TextoConsentimiento } from '../../api/types';
 import { createFormStatus, setBusy } from '../../components/form';
 import type { Page, RouteParams } from '../../router/router';
 import { clear, h } from '../../utils/dom';
@@ -8,10 +8,13 @@ import type { PageContext } from '../context';
 import { crearAnamnesis, type Anamnesis } from './anamnesis';
 import {
   CODIGO_CONSENTIMIENTO_REQUERIDO,
+  CODIGO_PACIENTE_INACTIVO,
   MSG_CARGANDO,
   MSG_CONSENTIMIENTO_OK,
   MSG_CONSENTIMIENTO_REQUERIDO,
+  MSG_INACTIVO,
   MSG_PACIENTE_NO_ENCONTRADO,
+  MSG_SIN_CONSENTIMIENTO,
   MSG_SIN_TEXTO_VIGENTE,
   MSG_TEXTO_CAMBIO,
   TITULO_FICHA,
@@ -34,6 +37,9 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
   let gen = 0;
   let anamnesis: Anamnesis | null = null;
   let notasClinicas: Notas | null = null;
+  /** Paciente dado de baja (D6): la historia clínica se lee pero no se escribe. */
+  let activo = true;
+  let consentimientoActual: Consentimiento | null = null;
 
   const encabezado = h('p', { className: 'encabezado-paciente' });
   const estado = h('p', { className: 'estado', attrs: { role: 'status' } });
@@ -79,6 +85,7 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
       ([p, consentimientos]) => {
         if (!vigente(mia)) return;
         encabezado.textContent = `${p.apellido}, ${p.nombre} · DNI ${p.dni}`;
+        activo = p.activo;
         const [masReciente] = consentimientos;
         if (masReciente === undefined) sinConsentimiento();
         else conConsentimiento(masReciente);
@@ -99,8 +106,18 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
 
   /* Sin consentimiento: texto vigente, casilla obligatoria y registro (D4). */
 
+  function avisoInactivo(): HTMLElement {
+    return h('p', { className: 'aviso solo-lectura' }, MSG_INACTIVO);
+  }
+
   function sinConsentimiento(): void {
     const mia = ++gen;
+    if (!activo) {
+      // D6: dado de baja no se registra consentimiento; sin él no hay nada clínico que mostrar.
+      clear(cuerpo);
+      cuerpo.append(avisoInactivo(), h('p', {}, MSG_SIN_CONSENTIMIENTO));
+      return;
+    }
     cargando(cuerpo);
     ctx.ficha.textoVigente().then(
       (texto) => {
@@ -189,6 +206,9 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
           alerta.show(MSG_TEXTO_CAMBIO);
         } else if (esNoEncontrado(e)) {
           noEncontrado();
+        } else if (tieneCodigo(e, CODIGO_PACIENTE_INACTIVO)) {
+          activo = false;
+          sinConsentimiento();
         } else {
           alerta.show(mensajeDeError(e));
           setBusy(form, boton, false);
@@ -214,11 +234,13 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
 
   /* Con consentimiento: recién ahora se piden la ficha y las notas. */
 
-  function conConsentimiento(consentimiento: Consentimiento): void {
-    const mia = ++gen;
+  /** Aviso de baja (si corresponde), línea del consentimiento y contenedor de lo clínico. */
+  function cabeceraClinica(consentimiento: Consentimiento): HTMLElement {
+    consentimientoActual = consentimiento;
     const clinico = h('div', { className: 'clinico' });
     clear(cuerpo);
     cuerpo.append(
+      activo ? '' : avisoInactivo(),
       h(
         'p',
         { className: 'consentimiento-ok' },
@@ -226,7 +248,12 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
       ),
       clinico,
     );
-    cargarClinico(clinico, mia);
+    return clinico;
+  }
+
+  function conConsentimiento(consentimiento: Consentimiento): void {
+    const mia = ++gen;
+    cargarClinico(cabeceraClinica(consentimiento), mia);
   }
 
   function cargarClinico(clinico: HTMLElement, mia: number): void {
@@ -235,30 +262,7 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
     cargando(clinico);
     Promise.all([ctx.ficha.obtenerFicha(pacienteId), ctx.ficha.listarNotas(pacienteId, 0, NOTAS_POR_PAGINA)]).then(
       ([ficha, notas]) => {
-        if (!vigente(mia)) return;
-        clear(clinico);
-        liberarClinico();
-        const anunciar = (mensaje: string): void => {
-          alerta.clear();
-          estado.textContent = mensaje;
-        };
-        anamnesis = crearAnamnesis({
-          ficha,
-          soloLectura: false,
-          guardar: (request) => ctx.ficha.guardarFicha(pacienteId, request),
-          recargar: () => ctx.ficha.obtenerFicha(pacienteId),
-          alError: errorClinico,
-          anunciar,
-        });
-        notasClinicas = crearNotas({
-          inicial: notas,
-          soloLectura: false,
-          listar: (page) => ctx.ficha.listarNotas(pacienteId, page, NOTAS_POR_PAGINA),
-          crear: (texto) => ctx.ficha.crearNota(pacienteId, texto),
-          alError: errorClinico,
-          anunciar,
-        });
-        clinico.append(anamnesis.element, notasClinicas.element);
+        if (vigente(mia)) pintarClinico(clinico, pacienteId, ficha, notas);
       },
       (error: unknown) => {
         if (!vigente(mia)) return;
@@ -266,6 +270,33 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
         else reintentable(clinico, error, () => cargarClinico(clinico, mia));
       },
     );
+  }
+
+  /** Crea anamnesis y notas; en solo lectura si el paciente está dado de baja (D6). */
+  function pintarClinico(clinico: HTMLElement, pacienteId: number, ficha: Ficha, notas: Pagina<Nota>): void {
+    clear(clinico);
+    liberarClinico();
+    const anunciar = (mensaje: string): void => {
+      alerta.clear();
+      estado.textContent = mensaje;
+    };
+    anamnesis = crearAnamnesis({
+      ficha,
+      soloLectura: !activo,
+      guardar: (request) => ctx.ficha.guardarFicha(pacienteId, request),
+      recargar: () => ctx.ficha.obtenerFicha(pacienteId),
+      alError: errorClinico,
+      anunciar,
+    });
+    notasClinicas = crearNotas({
+      inicial: notas,
+      soloLectura: !activo,
+      listar: (page) => ctx.ficha.listarNotas(pacienteId, page, NOTAS_POR_PAGINA),
+      crear: (texto) => ctx.ficha.crearNota(pacienteId, texto),
+      alError: errorClinico,
+      anunciar,
+    });
+    clinico.append(anamnesis.element, notasClinicas.element);
   }
 
   function liberarClinico(): void {
@@ -281,7 +312,31 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
       bloquear();
       return true;
     }
+    if (tieneCodigo(error, CODIGO_PACIENTE_INACTIVO)) {
+      pasarASoloLectura();
+      return true;
+    }
     return false;
+  }
+
+  /**
+   * 409 PACIENTE_INACTIVO en una escritura (baja concurrente, D6): se re-pinta en solo lectura con lo que ya está en
+   * memoria (última ficha confirmada y notas cargadas), sin volver a pedirlo (D8). Lo escrito sin guardar se descarta:
+   * ya no se puede guardar.
+   */
+  function pasarASoloLectura(): void {
+    activo = false;
+    const ficha = anamnesis?.actual();
+    const notas = notasClinicas?.estado();
+    const consentimiento = consentimientoActual;
+    if (id === undefined || ficha === undefined || notas === undefined || consentimiento === null) {
+      iniciar();
+      return;
+    }
+    gen++;
+    estado.textContent = '';
+    alerta.clear();
+    pintarClinico(cabeceraClinica(consentimiento), id, ficha, notas);
   }
 
   /** 409 CONSENTIMIENTO_REQUERIDO (p. ej. una carrera): se descartan los datos clínicos y se vuelve al bloqueo. */

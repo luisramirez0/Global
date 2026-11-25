@@ -227,7 +227,16 @@
 >
 > Salvo N6, cada uno lo detecta un solo test.
 
-- [ ] 5.6 RED: **paciente inactivo** (D6): solo lectura con y sin consentimiento; `409 PACIENTE_INACTIVO` → solo lectura. GREEN.
+- [x] 5.6 (8 tests en `pages/ficha/inactivo.test.ts`; RED real 7/8, el que pasaba es el de control con paciente activo. Dado de baja sin consentimiento no pide el texto vigente, ni la ficha, ni las notas. Ante un `409 PACIENTE_INACTIVO` se re-pinta con lo que hay en memoria, sin volver a pedirlo; ver design D6. Mutación hecha, ver nota) RED: **paciente inactivo** (D6): solo lectura con y sin consentimiento; `409 PACIENTE_INACTIVO` → solo lectura. GREEN.
+> **Nota de mutación (5.6, 2026-11-25).** Sobre `ficha.ts`, sin commitear, restaurado desde una copia en memoria. **Mueren los 7**:
+> - I1: la anamnesis no respeta la baja (5 tests).
+> - I2: las notas no respetan la baja (4).
+> - I3: se ignora `activo` al cargar (4).
+> - I4: dado de baja y sin consentimiento, igual se ofrece registrarlo (2).
+> - I5: el `409 PACIENTE_INACTIVO` en lo clínico no pasa a solo lectura (2).
+> - I6: el `409 PACIENTE_INACTIVO` al consentir no pasa a solo lectura (1).
+> - I7: pasar a solo lectura vuelve a pedir todo (2).
+
 - [ ] 5.7 RED: **rol** (D2): `RECEPCION` y sin perfil → aviso y **cero llamadas** a los mocks de pacientes y ficha; `PROFESIONAL` y `ADMIN` → piden paciente y consentimientos; `403` → mensaje fijo. GREEN.
 - [ ] 5.8 RED: **higiene** (D8):
   - `dispose` y respuesta tardía.

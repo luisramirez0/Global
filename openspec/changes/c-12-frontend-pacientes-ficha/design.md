@@ -90,6 +90,10 @@ Contrato real verificado en el código (`paciente/abm`, `paciente/ficha`, `secur
   - No se crean el formulario de anamnesis, el de nota ni el registro de consentimiento.
   - Sin consentimiento previo, se ve "Sin consentimiento registrado" y nada más.
 - `409 PACIENTE_INACTIVO` en una escritura (baja concurrente) cambia la página a ese modo.
+  - **Precisión de la tarea 5.6**: el cambio usa lo que ya está en memoria (la última ficha confirmada por el servidor y las notas cargadas), sin volver a pedirlo (D8).
+  - Lo escrito sin guardar se descarta, porque el paciente ya no admite escrituras.
+  - Leer sigue permitido: "Ver más" funciona en solo lectura.
+  - Si el 409 llega al registrar el consentimiento, se muestra el aviso y "Sin consentimiento registrado.".
 
 ### D7 — Notas
 - Lista paginada (20) del más reciente al más antiguo. "Ver más" pide la página siguiente y la agrega al final. Cada página nueva genera su propia lectura auditada; es esperado.
