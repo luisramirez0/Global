@@ -4,7 +4,7 @@
 
 C-05 expone `/api/pacientes` (handoff `knowledge-base/entrega/C-05.md`, spec `patient-management`). C-08 expone consentimiento, ficha y notas (handoff `knowledge-base/entrega/C-08.md`, spec `clinical-record`), con auditoría de C-06. C-10 dejó el cliente HTTP, la sesión, el router por hash, el layout, `h()` y el lint anti-XSS. C-11 dejó `crudPage`, `createSelectField` y `createLoggedContext(rol)`. C-12 agrega solo frontend.
 
-Las decisiones D1–D11 fueron aprobadas por la persona (Integrante 5, responsable de C-12) el 2026-11-24, con los ajustes que se marcan **A-…** en cada decisión.
+Las decisiones D1–D11 fueron aprobadas por la persona (Integrante 5, responsable de C-12, confirmado por ella el 2026-11-24) el 2026-11-24, con los ajustes que se marcan **A-…** en cada decisión.
 
 Contrato real verificado en el código (`paciente/abm`, `paciente/ficha`, `security/Permisos`, `common/web/ApiExceptionHandler`):
 
@@ -127,12 +127,14 @@ Contrato real verificado en el código (`paciente/abm`, `paciente/ficha`, `secur
 - `404` en baja o reactivación → "El paciente ya no existe" y recarga. `403` → mensaje fijo.
 
 ### D11 — DNI duplicado
-- `409` con `pacienteId` en alta o edición:
+- **Contrato verificado** (lectura del backend y handoff de C-05, 2026-11-24):
+  - `ApiExceptionHandler.dniDuplicado` responde `409` con `pacienteId` siempre y **nunca** con `codigo`.
+  - `PacienteService` lanza `DniDuplicadoException` solo con el id de un paciente existente, en el chequeo previo y en la carrera atrapada por la `UNIQUE`.
+- **Regla A-D11** (pedida por la persona, 2026-11-24): todo `409` con `pacienteId` es DNI duplicado, **traiga o no `codigo`**. En alta o edición:
   - Aviso fijo "Ya existe un paciente con ese DNI" en el campo DNI.
   - Enlace "Ver paciente existente" → `#/pacientes/<pacienteId>`.
   - En esa pantalla, si el paciente está inactivo y el rol es `GESTION`, se ofrece "Reactivar".
-- Sin `pacienteId`, solo el aviso.
-- **Aclaración de la tarea 4.5 (A-D3)**: el 409 de DNI duplicado de C-05 no trae `codigo`. Un 409 **con** `codigo` (cualquiera) no se trata como DNI duplicado: muestra el mensaje genérico de `conflict` y no marca el campo DNI.
+- Un `409` **sin** `pacienteId` (con o sin `codigo`) no es DNI duplicado: mensaje genérico fijo de `conflict`, sin marcar el DNI ni mostrar enlace (A-D3). Esto reemplaza la aclaración de la tarea 4.5, que decidía por la ausencia de `codigo`.
 
 ## Risks / Trade-offs
 
@@ -183,6 +185,8 @@ El trabajo se hace en dos partes, en este orden. Cada una se revisa por separado
 
 C-12a:
 - `api/errors.ts`: `codigo` y `pacienteId` validados, sin eco de `detail`.
+- `api/rutas.ts`: `conId` y `conQuery` se movieron desde `api/agendaConfig.ts`, **archivo de C-11**. Es solo un movimiento, sin cambio de comportamiento: `agendaConfig.ts` los importa y sus tests (`agendaConfig.test.ts`) pasan sin modificarse.
+- `pages/pacientes/formulario.ts`: DNI duplicado solo con `pacienteId` (A-D11).
 - `router/router.ts`: id inválido → ninguna request.
 - `routes.ts`: sin `/pacientes/:id/ficha`; lista sin enlace "Ficha".
 - Datos personales como texto literal; mensajes de error del servidor sin `title` ni `detail`.

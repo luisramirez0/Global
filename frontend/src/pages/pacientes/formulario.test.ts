@@ -158,14 +158,26 @@ describe('alta', () => {
     expect(link?.textContent).toBe('Ver paciente existente');
   });
 
-  it('409 sin pacienteId: solo el aviso, sin enlace', async () => {
+  it('D11: un 409 sin pacienteId no es DNI duplicado: mensaje genérico, sin marcar el DNI ni enlace', async () => {
     const { ctx, root } = montarAlta();
     ctx.pacientes.crear.mockRejectedValue(new ApiError('conflict', { status: 409 }));
     fill(root, COMPLETO);
     submit(root);
     await flush();
-    expect(errorOf(root, 'dni')).toBe(MSG_DNI_DUPLICADO);
+    expect(errorOf(root, 'dni')).toBe('');
+    expect(alertText(root)).toBe(MSG_GENERIC);
     expect(root.querySelector('a[href^="#/pacientes/"]:not([href="#/pacientes"])')).toBeNull();
+  });
+
+  it('D11: un 409 con pacienteId es DNI duplicado aunque traiga codigo', async () => {
+    const { ctx, root } = montarAlta();
+    ctx.pacientes.crear.mockRejectedValue(new ApiError('conflict', { status: 409, pacienteId: 3, codigo: 'DNI_DUPLICADO' }));
+    fill(root, COMPLETO);
+    submit(root);
+    await flush();
+    expect(errorOf(root, 'dni')).toBe(MSG_DNI_DUPLICADO);
+    expect(root.querySelector('a[href="#/pacientes/3"]')?.textContent).toBe('Ver paciente existente');
+    expect(root.textContent).not.toContain('DNI_DUPLICADO');
   });
 
   it('un segundo envío mientras el primero está pendiente no duplica el alta', async () => {
@@ -279,9 +291,9 @@ describe('edición', () => {
     expect(root.textContent).not.toContain('Acceso denegado');
   });
 
-  it('un 409 con código de negocio desconocido no es DNI duplicado: mensaje genérico (A-D3)', async () => {
+  it('un 409 con código desconocido y sin pacienteId no es DNI duplicado: mensaje genérico (A-D3, D11)', async () => {
     const { ctx, root } = await montarEdicion();
-    // El 409 de DNI duplicado de C-05 no trae codigo; uno con codigo es de otro contexto.
+    // El 409 de DNI duplicado de C-05 siempre trae pacienteId; sin él es otro conflicto.
     ctx.pacientes.editar.mockRejectedValue(new ApiError('conflict', { status: 409, codigo: 'ALGO_NUEVO' }));
     submit(root);
     await flush();

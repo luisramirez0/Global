@@ -48,15 +48,19 @@ Las pantallas `#/pacientes/nuevo` y `#/pacientes/:id` SHALL permitir cargar y ed
 - **THEN** se muestra "Paciente no encontrado" sin formulario
 
 ### Requirement: DNI duplicado
-Ante un `409` con `pacienteId` en alta o edición, la UI SHALL marcar el campo DNI con "Ya existe un paciente con ese DNI" y ofrecer el enlace "Ver paciente existente" a `#/pacientes/<pacienteId>`. Sin `pacienteId` MUST mostrar solo el aviso.
+Ante un `409` con `pacienteId` en alta o edición, traiga o no `codigo`, la UI SHALL marcar el campo DNI con "Ya existe un paciente con ese DNI" y ofrecer el enlace "Ver paciente existente" a `#/pacientes/<pacienteId>`. Un `409` sin `pacienteId` MUST NOT tratarse como DNI duplicado: MUST mostrar el mensaje genérico fijo de conflicto, sin marcar el DNI ni ofrecer el enlace.
 
 #### Scenario: Duplicado con id
 - **WHEN** el alta responde `409` con `pacienteId: 7`
 - **THEN** se muestra el aviso y un enlace a `#/pacientes/7`
 
-#### Scenario: Duplicado sin id
-- **WHEN** la edición responde `409` sin `pacienteId`
-- **THEN** se muestra el aviso sin enlace
+#### Scenario: Duplicado con id y código
+- **WHEN** el alta responde `409` con `pacienteId: 3` y `codigo: "DNI_DUPLICADO"`
+- **THEN** se muestra el aviso en el DNI y un enlace a `#/pacientes/3`, sin el código
+
+#### Scenario: Conflicto sin id
+- **WHEN** el alta o la edición responden `409` sin `pacienteId`
+- **THEN** se muestra el mensaje genérico de conflicto, sin aviso en el DNI ni enlace
 
 ### Requirement: Baja y reactivación
 La baja SHALL pedir confirmación en dos pasos en la fila y enviar `DELETE`. Un paciente inactivo SHALL ofrecer "Reactivar". Después de cualquiera de las dos, la lista MUST recargarse. Un `404` MUST informar que el paciente ya no existe y recargar.

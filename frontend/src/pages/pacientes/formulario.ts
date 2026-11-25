@@ -103,9 +103,12 @@ function crearFormulario(prefijo: string, textoBoton: string, onSubmit: () => vo
   };
 }
 
-/** El 409 de DNI duplicado de C-05 no trae `codigo`; uno con `codigo` es de otro contexto (A-D3). */
-function esDniDuplicado(error: unknown): error is ApiError {
-  return error instanceof ApiError && error.kind === 'conflict' && error.codigo === null;
+/**
+ * D11: el 409 de DNI duplicado de C-05 siempre trae `pacienteId` (`ApiExceptionHandler.dniDuplicado`). Todo 409 con
+ * `pacienteId` es DNI duplicado, traiga o no `codigo`; sin `pacienteId` es otro conflicto y va al mensaje genérico.
+ */
+function esDniDuplicado(error: unknown): error is ApiError & { pacienteId: number } {
+  return error instanceof ApiError && error.kind === 'conflict' && error.pacienteId !== null;
 }
 
 /**
@@ -134,9 +137,7 @@ async function enviar(
       onNoEncontrado();
     } else if (esDniDuplicado(error)) {
       applyFieldErrors(controles, { dni: MSG_DNI_DUPLICADO });
-      if (error.pacienteId !== null) {
-        form.duplicado.append(h('a', { attrs: { href: `#/pacientes/${error.pacienteId}` } }, 'Ver paciente existente'));
-      }
+      form.duplicado.append(h('a', { attrs: { href: `#/pacientes/${error.pacienteId}` } }, 'Ver paciente existente'));
     } else {
       applyFieldErrors(controles, serverFieldErrors(error));
       form.status.show(mensajeDeError(error));
