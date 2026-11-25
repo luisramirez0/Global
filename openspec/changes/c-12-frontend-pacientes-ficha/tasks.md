@@ -252,7 +252,10 @@
 >   - U3: las notas no lo muestran (2).
 >   - U4: muestra todos los campos y no solo los cambiados (4).
 
-- [ ] 5.8 RED: **higiene** (D8):
+- [x] 5.8 (14 tests en `pages/ficha/higiene.test.ts` + 3 en `tests/tooling/no-storage-in-pages.test.ts`.
+  - **Sin RED**: los 17 pasaron al escribirlos, porque la higiene ya estaba implementada en 5.3–5.7. Para compensarlo, se hizo mutación (ver nota).
+  - El test sobre el código fuente usa ESLint sobre los archivos reales de `src/pages/{pacientes,ficha}`, con reglas que prohíben `sessionStorage`, `localStorage`, `indexedDB`, `document.cookie` y `console`. Un primer caso comprueba que el chequeo detecta cada uno.
+  - El recorrido completo incluye consentimiento, 409 al guardar, 422 al crear una nota y "Ver más") RED: **higiene** (D8):
   - `dispose` y respuesta tardía.
   - Título fijo.
   - `localStorage` vacío y `sessionStorage` solo con `global.session.v1`.
@@ -260,6 +263,13 @@
   - Test de fuente: `src/pages/{pacientes,ficha}` sin `sessionStorage`.
 
   GREEN.
+> **Nota de mutación (5.8, 2026-11-25).** Restaurado desde una copia en memoria. **Mueren los 5**:
+> - H1: guarda el borrador en `localStorage` (2 tests: el de comportamiento y el de ESLint).
+> - H2: escribe en `console` (2).
+> - H3: `dispose` no marca la página como liberada (3, respuestas tardías).
+> - H4: el título lleva el nombre del paciente (4).
+> - H5: guarda el consentimiento en `sessionStorage` (2).
+
 - [ ] 5.9 **Registrar la ficha y su enlace**:
   - Ruta `/pacientes/:id/ficha` en `routes.ts`.
   - Enlace "Ficha" en la lista, solo `GESTION`.
