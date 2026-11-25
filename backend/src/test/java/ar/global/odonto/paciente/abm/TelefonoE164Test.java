@@ -41,4 +41,14 @@ class TelefonoE164Test {
 					assertThat(ex.getMessage()).doesNotContain(raw);
 				});
 	}
+
+	@Test
+	void esValidoAcceptsOnlyStrictE164() {
+		assertThat(TelefonoE164.esValido("+5491122334455")).isTrue();
+		assertThat(TelefonoE164.esValido("+12345678")).isTrue();
+		assertThat(TelefonoE164.esValido(null)).isFalse();
+		assertThat(TelefonoE164.esValido("5491122334455")).isFalse();
+		assertThat(TelefonoE164.esValido("+54 9 11 2233 4455")).isFalse();
+		assertThat(TelefonoE164.esValido("+1234567")).isFalse();
+	}
 }
