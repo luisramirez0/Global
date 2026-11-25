@@ -259,6 +259,9 @@
 - [ ] 7b.2 `grep` en `frontend/src` fuera de los tests: `innerHTML|outerHTML|insertAdjacentHTML|localStorage|console\.|: any|as any` sin resultados; `sessionStorage` solo en `state/session.ts`.
 - [ ] 7b.3 `git diff main -- backend` vacío; tests de rutas exactas existentes sin cambios (2.3).
 - [ ] 7b.4 Guía de verificación manual de la ficha para la persona (contra la API real, ADMIN y RECEPCION):
+  - **Pegado de texto largo (A-D5b), obligatorio a mano**: jsdom no reproduce el corte que hace el navegador al pegar con `maxlength`. Los tests solo verifican que el atributo no esté y que aparezca el aviso.
+    - En Chrome, pegar en "Alergias" un texto de más de 4000 caracteres y en "Nueva nota" uno de más de 10000.
+    - Verificar que el texto queda **completo** (no cortado), que aparece "Máximo N caracteres (hay M)." y que no se puede guardar hasta recortarlo.
   - Consentimiento y primera carga de la ficha.
   - 409 con dos pestañas.
   - Nota con el profesional del seed.

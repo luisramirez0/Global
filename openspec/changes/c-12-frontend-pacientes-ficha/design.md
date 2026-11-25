@@ -197,6 +197,10 @@ C-12a:
 - Datos personales como texto literal; mensajes de error del servidor sin `title` ni `detail`.
 
 C-12b:
+- `components/form.ts` (**componente compartido, introducido en C-12a**): `createTextAreaField({ avisarExceso: true })` **deja de poner el atributo `maxlength`** en las áreas de texto clínicas (anamnesis y notas).
+  - Motivo (A-D5b): con `maxlength`, el navegador corta en silencio un texto pegado que supera el límite, y se perdería texto clínico sin aviso.
+  - En su lugar se muestra "Máximo N caracteres (hay M)." y no se puede guardar.
+  - Sin `avisarExceso`, el componente sigue poniendo `maxlength` como antes. Los campos de pacientes de C-12a no cambian.
 - `pages/ficha/`:
   - Sin consentimiento, sin anamnesis ni notas en el DOM y sin `GET /ficha`.
   - `RECEPCION` sin requests.
