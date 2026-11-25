@@ -298,18 +298,86 @@
 
 ## 7b. Verificación y cierre de C-12
 
-- [ ] 7b.1 `npm test`, `npm run lint`, `npm run typecheck` y `npm run build` limpios; anotar conteos y tamaño del bundle.
-- [ ] 7b.2 `grep` en `frontend/src` fuera de los tests: `innerHTML|outerHTML|insertAdjacentHTML|localStorage|console\.|: any|as any` sin resultados; `sessionStorage` solo en `state/session.ts`.
-- [ ] 7b.3 `git diff main -- backend` vacío; tests de rutas exactas existentes sin cambios (2.3).
-- [ ] 7b.4 Guía de verificación manual de la ficha para la persona (contra la API real, ADMIN y RECEPCION):
-  - **Pegado de texto largo (A-D5b), obligatorio a mano**: jsdom no reproduce el corte que hace el navegador al pegar con `maxlength`. Los tests solo verifican que el atributo no esté y que aparezca el aviso.
-    - En Chrome, pegar en "Alergias" un texto de más de 4000 caracteres y en "Nueva nota" uno de más de 10000.
-    - Verificar que el texto queda **completo** (no cortado), que aparece "Máximo N caracteres (hay M)." y que no se puede guardar hasta recortarlo.
-  - Consentimiento y primera carga de la ficha.
-  - 409 con dos pestañas.
-  - Nota con el profesional del seed.
-  - Paciente dado de baja en solo lectura.
-  - Revisar las filas en `audit_log`.
-  - RECEPCION sin ficha y sin requests.
+- [x] 7b.1 (886/886 en 42 archivos; lint y typecheck limpios; build: JS 66,44 kB / 21,44 kB gzip, CSS 2,01 kB; `dist/` ignorado por git) `npm test`, `npm run lint`, `npm run typecheck` y `npm run build` limpios; anotar conteos y tamaño del bundle.
+- [x] 7b.2 (sin resultados. `sessionStorage` solo en el código de sesión de C-10: `state/session.ts`, la inyección en `app.ts` y un comentario en `main.ts`; nunca en `pages/`, lo que además verifica `tests/tooling/no-storage-in-pages.test.ts`) `grep` en `frontend/src` fuera de los tests: `innerHTML|outerHTML|insertAdjacentHTML|localStorage|console\.|: any|as any` sin resultados; `sessionStorage` solo en `state/session.ts`.
+- [x] 7b.3 (`git diff main -- backend` vacío, sin migraciones. En los tests que ya existían en `main` hay 0 líneas borradas: `errors`, `http`, `app`, `router`, `routes`. La excepción es `form.test.ts`, con 1, que es el import ampliado en 3.1) `git diff main -- backend` vacío; tests de rutas exactas existentes sin cambios (2.3).
+- [ ] 7b.4 Guía de verificación manual de la ficha para la persona. **Pendiente de que la persona la ejecute.** Contra la API real, con backend y MySQL levantados por ella y `npm run dev`, en Chrome con DevTools (Network y Application).
+
+  **Preparación**
+  1. Iniciar sesión con ADMIN.
+  2. Crear (o usar) un paciente activo sin consentimiento, por ejemplo Ana Pérez, DNI `30.111.222`.
+  3. En "Pacientes", verificar que la fila tiene el enlace **"Ficha"** y hacer clic: la URL queda en `#/pacientes/<id>/ficha`, con el título **"Ficha clínica"** y el enlace **"Volver al paciente"**. El encabezado dice **"Pérez, Ana · DNI 30111222"**.
+
+  **Consentimiento (bloqueo)**
+  4. Sin consentimiento se ve la sección **"Consentimiento de datos de salud"**, con **"Versión <v>"** y el texto completo. Si aparece **"No hay un texto de consentimiento vigente. Consultá al administrador del consultorio."**, el catálogo `consentimiento_texto` no tiene una versión vigente.
+  5. **No** se ven "Anamnesis" ni "Notas clínicas", y en Network no hay requests a `/ficha` ni a `/notas`.
+  6. El botón **"Registrar consentimiento"** está deshabilitado. Marcar la casilla **"El paciente leyó y aceptó el texto de consentimiento (versión <v>)"** lo habilita; desmarcarla lo deshabilita otra vez.
+  7. Con la casilla marcada, hacer clic en **"Registrar consentimiento"**. Aparecen:
+     - **"Consentimiento registrado."**;
+     - **"Consentimiento registrado el dd/mm/aaaa HH:mm (versión <v>)."**, en hora de Argentina;
+     - las secciones **"Anamnesis"** y **"Notas clínicas"**.
+
+  **Anamnesis**
+  8. Con la ficha recién creada se ve **"La ficha todavía no fue cargada."**. Tiene los campos Alergias, Medicación actual, Antecedentes médicos, Enfermedades relevantes, Motivo de consulta y Observaciones, y Embarazo con **"Sin dato" / "Sí" / "No"**.
+  9. Cargar Alergias `Penicilina`, poner Embarazo en **"No"** y hacer clic en **"Guardar ficha"**. Aparecen **"Ficha guardada."** y **"Última actualización: dd/mm/aaaa HH:mm"**.
+  10. **409 con dos pestañas**: abrir la misma ficha en otra pestaña (B).
+      - En A, cambiar Alergias a `Penicilina, látex` y guardar.
+      - En B, sin recargar, cambiar Observaciones a `Desde la pestaña B` y hacer clic en **"Guardar ficha"**. Aparece **"Otra persona modificó la ficha. Tus cambios no se guardaron."** y lo escrito en B **sigue en el formulario**.
+      - En B, hacer clic en **"Cargar la versión actual"**. Aparece **"Se van a perder los cambios que no guardaste."** con **"Cargar y descartar mis cambios"** y **"Cancelar"**.
+      - **"Cancelar"** deja todo como estaba.
+      - Repetir y hacer clic en **"Cargar y descartar mis cambios"**. El formulario muestra `Penicilina, látex` y aparece **"Se cargó la versión actual de la ficha."**. Guardar de nuevo desde B ahora funciona.
+
+  **Pegado de texto largo (A-D5b), obligatorio a mano**
+
+  jsdom no reproduce el corte que hace el navegador al pegar con `maxlength`. Los tests solo verifican que el atributo no esté y que aparezca el aviso.
+  11. Para generar el texto, en la consola de DevTools: `copy('a'.repeat(4500))`. Pegar en **"Alergias"** con Ctrl+V. Tiene que pasar todo esto:
+      - el texto queda **completo**, sin cortarse en 4000;
+      - aparece **"Máximo 4000 caracteres (hay 4500)."**;
+      - **"Guardar ficha"** no envía nada (Network sin PUT).
+  12. Borrar hasta 4000 caracteres: el aviso desaparece y se puede guardar.
+  13. Repetir en **"Nueva nota"** con `copy('b'.repeat(10050))`. Tiene que aparecer **"Máximo 10000 caracteres (hay 10050)."**, el texto queda completo y **"Agregar nota"** no envía nada.
+
+  **Notas**
+  14. Se ve **"Las notas no se pueden editar; para corregir, agregá una nota nueva."**. Sin notas, se ve **"Todavía no hay notas."**.
+  15. Escribir en **"Nueva nota"** `Control de rutina.` y hacer clic en **"Agregar nota"**:
+      - aparece **"Nota agregada."**;
+      - la nota queda **primera**, con **"dd/mm/aaaa HH:mm · Profesional #<id>"**;
+      - el campo se vacía;
+      - ninguna nota tiene botones de editar ni de borrar.
+  16. Con más de 20 notas, aparece **"Ver más"**: agrega las siguientes al final y desaparece en la última página.
+  17. Si hay un usuario ADMIN/PROFESIONAL **sin** profesional vinculado, con él, agregar una nota. Tiene que aparecer **"Tu usuario no está vinculado a un profesional activo; no se puede firmar la nota."** y lo escrito queda en el campo. Este paso es opcional si no existe ese usuario.
+
+  **Paciente dado de baja**
+  18. Dar de baja al paciente desde "Pacientes" y abrir su ficha (por URL, o con "Incluir dados de baja" y "Ficha"). Tiene que verse:
+      - **"Paciente dado de baja: la historia clínica es de solo lectura."**;
+      - la anamnesis y las notas como texto, con **"Sin dato"** en los vacíos;
+      - **sin** formularios ni botones de guardar o agregar;
+      - **"Ver más"**, que sigue funcionando.
+  19. Un paciente dado de baja **sin** consentimiento muestra el aviso y **"Sin consentimiento registrado."**, sin casilla, y en Network no hay pedidos al texto vigente, la ficha ni las notas.
+  20. **Baja concurrente**: reactivar al paciente.
+      - En la pestaña A, abrir su ficha y escribir algo en Alergias y en "Nueva nota", sin guardar.
+      - En la pestaña B, darlo de baja.
+      - En A, hacer clic en **"Guardar ficha"**. La página pasa a solo lectura con el aviso de baja, y lo escrito **queda visible** como texto con **"No se pudo guardar: el paciente fue dado de baja."**: el campo cambiado en la anamnesis y **"Nota sin guardar:"** en las notas.
+
+  **RECEPCION**
+  21. Iniciar sesión con RECEPCION (registrar y cambiar el rol como en el handoff de C-11, y volver a entrar).
+      - En la lista de pacientes **no** está el enlace "Ficha".
+      - Escribir a mano `#/pacientes/<id>/ficha`: se ve **"Sin permiso para ver la historia clínica."** y en Network **no hay ninguna request** a `/api/pacientes` ni a `/api/consentimientos`.
+
+  **Datos en el navegador**
+  22. En DevTools, Application:
+      - **Local Storage** está vacío;
+      - **Session Storage** solo tiene `global.session.v1`, y su valor no contiene datos clínicos;
+      - la consola no muestra mensajes de la app.
+  23. El título de la pestaña es siempre **"Ficha clínica · Global"**, sin el nombre del paciente.
+  24. **XSS**: con un paciente llamado `<img src=x onerror=alert(1)>` y una nota con `<script>alert(1)</script>`, todo se ve como texto y no aparece ningún `alert`.
+
+  **Auditoría (RN-DS-02)**
+  25. Con la consulta del handoff de C-11 (`docker compose exec mysql …`), ejecutar `SELECT accion, entidad, entidad_id, detalle FROM audit_log ORDER BY id DESC LIMIT 30;`. Tienen que aparecer:
+      - `CREATE ConsentimientoDatos`;
+      - `READ FichaClinica` y `READ NotaClinica` por cada apertura y cada "Ver más";
+      - `CREATE`/`UPDATE FichaClinica` y `CREATE NotaClinica`;
+      - todos con `entidad_id` = id del paciente;
+      - **ninguna** fila por los intentos de RECEPCION.
 - [ ] 7b.5 Handoff `knowledge-base/entrega/C-12.md` (cubre C-12a y C-12b). Deuda: autor por id, sin `version` en paciente, respuestas tardías no abortadas.
 - [ ] 7b.6 Tras la verificación manual de la persona: `[x]` en `CHANGES.md` §C-12 con evidencia. Commit, push y PR solo con autorización (regla 10), avisando a integrante-1/2 (regla 12). Archivo del change y sincronización de specs después del merge de C-12b.
