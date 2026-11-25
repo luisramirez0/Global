@@ -12,6 +12,8 @@ export interface RequestOptions<T> {
   body?: unknown;
   /** Si es `true` (por defecto) envía el token de la sesión y un 401 cierra la sesión. */
   auth?: boolean;
+  /** Política de caché del navegador; solo se copia al `RequestInit` si viene definida (C-14, D1). */
+  cache?: RequestCache;
 }
 
 export interface HttpClient {
@@ -70,6 +72,10 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
     if (options.body !== undefined) {
       headers.set('Content-Type', 'application/json');
       init.body = JSON.stringify(options.body);
+    }
+
+    if (options.cache !== undefined) {
+      init.cache = options.cache;
     }
 
     const controller = new AbortController();

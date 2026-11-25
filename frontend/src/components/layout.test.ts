@@ -41,6 +41,7 @@ describe('layout', () => {
 
   const BASE = [
     ['Agenda', '#/agenda'],
+    ['Recordatorios', '#/recordatorios'],
     ['Configuración', '#/config/sillones'],
   ];
   const CON_AUDITORIA = [...BASE, ['Auditoría', '#/auditoria']];
@@ -49,7 +50,7 @@ describe('layout', () => {
     ['ADMIN', CON_AUDITORIA],
     ['PROFESIONAL', CON_AUDITORIA],
     ['RECEPCION', BASE],
-  ] as const)('el menú de %s es Agenda y Configuración (y Auditoría según C-15), sin Inicio', (rol, esperados) => {
+  ] as const)('el menú de %s es Agenda, Recordatorios (C-14) y Configuración (y Auditoría según C-15), sin Inicio', (rol, esperados) => {
     const { layout } = setup();
     layout.update({ ...ME_OK, usuario: { ...ME_OK.usuario, rol } });
     const enlaces = [...layout.root.querySelectorAll('nav a')].map((a) => [a.textContent, a.getAttribute('href')]);

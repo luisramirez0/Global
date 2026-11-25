@@ -4,10 +4,12 @@ import { createAuditoriaApi } from './api/auditoria';
 import { createAuthApi } from './api/auth';
 import { createHttpClient } from './api/http';
 import { createPacientesApi } from './api/pacientes';
+import { createRecordatoriosApi } from './api/recordatorios';
 import { createTurnosApi } from './api/turnos';
 import { createLayout } from './components/layout';
 import { messageForError } from './pages/auth/messages';
 import { createFlash, type PageContext } from './pages/context';
+import { crearRegistroEnviosSinConfirmar } from './pages/recordatorios/dominio/enviosSinConfirmar';
 import { createRouter, type Router } from './router/router';
 import { HOME_PATH, LOGIN_PATH, NAV_ITEMS, REDIRECTS, ROUTES } from './router/routes';
 import { createSession } from './state/session';
@@ -52,13 +54,26 @@ export function mountApp(doc: Document, title: string = DEFAULT_TITLE, deps: Par
   const turnos = createTurnosApi(http);
   const pacientes = createPacientesApi(http);
   const auditoria = createAuditoriaApi(http);
+  const recordatorios = createRecordatoriosApi(http);
+  const enviosSinConfirmar = crearRegistroEnviosSinConfirmar();
   const flash = createFlash();
 
   const layout = createLayout({ appName: title, navItems: NAV_ITEMS, onLogout: () => session.end('logout') });
   root.replaceChildren(layout.root);
 
   let router: Router | null = null;
-  const context: PageContext = { api, agenda, turnos, pacientes, auditoria, session, flash, navigate: (path) => router?.navigate(path) };
+  const context: PageContext = {
+    api,
+    agenda,
+    turnos,
+    pacientes,
+    auditoria,
+    recordatorios,
+    enviosSinConfirmar,
+    session,
+    flash,
+    navigate: (path) => router?.navigate(path),
+  };
   router = createRouter({
     win,
     outlet: layout.main,
@@ -75,6 +90,8 @@ export function mountApp(doc: Document, title: string = DEFAULT_TITLE, deps: Par
   const unsubscribe = session.subscribe((event) => {
     layout.update(session.profile());
     if (event.type === 'ended') {
+      // Fin de sesión (cierre manual, 401 o vencimiento): nada del usuario anterior queda en memoria (B1 de la revisión).
+      enviosSinConfirmar.limpiar();
       if (event.reason !== 'logout') flash.set(MSG_SESSION_EXPIRED);
       // Solo al cerrar: con 'started' el login todavía está cargando el perfil.
       activeRouter.resolve();

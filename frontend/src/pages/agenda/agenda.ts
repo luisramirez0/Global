@@ -354,6 +354,8 @@ export function renderAgenda(ctx: PageContext): Page {
         reprogramar: (id, cuerpo) => ctx.turnos.reprogramar(id, cuerpo),
       },
       ahora: () => Date.now(),
+      recordatorios: ctx.recordatorios,
+      sinConfirmar: ctx.enviosSinConfirmar,
       puedeOfrecerSobreturno: puedeOfrecerSobreturno(rolActual(ctx)),
       opener,
       abrir,

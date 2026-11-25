@@ -240,3 +240,49 @@ export interface FiltrosAuditoria {
 
 /** Paquete del export: se descarga tal cual, sin mostrarlo (design D11 de C-15). */
 export type ExportPaciente = Readonly<Record<string, unknown>>;
+
+/** Contrato de recordatorios de C-09 (knowledge-base/entrega/C-09.md, RecordatorioController). */
+
+export const CANALES_RECORDATORIO = ['WHATSAPP_LINK', 'EMAIL'] as const;
+export type CanalRecordatorio = (typeof CANALES_RECORDATORIO)[number];
+
+export const ESTADOS_RECORDATORIO = ['GENERADO', 'ENVIADO', 'ERROR'] as const;
+export type EstadoRecordatorio = (typeof ESTADOS_RECORDATORIO)[number];
+
+export interface EnlaceWhatsApp {
+  recordatorioId: number;
+  /** URL `https://wa.me/...`; contiene el teléfono: nunca se loguea ni se guarda. */
+  enlace: string;
+  generadoEn: string;
+}
+
+export interface RecordatorioEmail {
+  recordatorioId: number;
+  estado: EstadoRecordatorio;
+  enviadoEn: string;
+}
+
+export interface UltimoRecordatorio {
+  canal: CanalRecordatorio;
+  estado: EstadoRecordatorio;
+  generadoEn: string;
+}
+
+export interface PersonaResumen {
+  id: number;
+  nombre: string;
+  apellido: string;
+}
+
+export interface TurnoPendiente {
+  turnoId: number;
+  inicio: string;
+  fin: string;
+  estado: EstadoTurno;
+  paciente: PersonaResumen;
+  profesional: PersonaResumen;
+  tieneTelefono: boolean;
+  tieneEmail: boolean;
+  /** En pendientes solo puede ser `null` o tener estado `ERROR`. */
+  ultimoRecordatorio: UltimoRecordatorio | null;
+}

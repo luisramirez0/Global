@@ -5,12 +5,15 @@
  * con `aria-disabled` (enfocables, con el motivo por `aria-describedby`) hasta que el turno empieza. Los errores no
  * identificables dejan el diálogo abierto con "Recargar agenda" manual: nada se recarga solo.
  */
+import type { RecordatoriosApi } from '../../api/recordatorios';
 import type { TurnosApi } from '../../api/turnos';
 import type { EstadoTurno, Sillon, Turno } from '../../api/types';
+import { crearAccionesRecordatorio } from '../../components/agenda/accionesRecordatorio';
 import type { Dialogo, OpcionesDialogo } from '../../components/agenda/dialogo';
 import { applyFieldErrors, createTextAreaField, setBusy } from '../../components/form';
 import { h } from '../../utils/dom';
 import { serverFieldErrors } from '../auth/messages';
+import type { RegistroEnviosSinConfirmar } from '../recordatorios/dominio/enviosSinConfirmar';
 import { contenidoDetalle } from './detalleTurno';
 import { nombrePaciente } from './dominio/formato';
 import { clasificarRechazo } from './dominio/rechazos';
@@ -30,6 +33,10 @@ export interface OpcionesAcciones {
   sillones: readonly Sillon[];
   api: Pick<TurnosApi, 'cambiarEstado' | 'reprogramar'>;
   ahora(): number;
+  /** Recordatorios del turno (C-14, D6): solo se ofrecen en `PROGRAMADO` y `CONFIRMADO`. */
+  recordatorios: Pick<RecordatoriosApi, 'enlaceWhatsApp' | 'enviarEmail'>;
+  /** Registro en memoria compartido con la página de recordatorios (C-14, D11). */
+  sinConfirmar: RegistroEnviosSinConfirmar;
   puedeOfrecerSobreturno: boolean;
   opener: HTMLElement;
   abrir(opciones: OpcionesDialogo): Dialogo | null;
@@ -109,6 +116,29 @@ export function abrirAccionesTurno(opciones: OpcionesAcciones): Dialogo | null {
     );
   }
 
+  function esRecordable(estado: EstadoTurno): boolean {
+    return estado === 'PROGRAMADO' || estado === 'CONFIRMADO';
+  }
+
+  /** Un recordatorio no cambia el turno: no cierra el diálogo ni recarga la agenda; "Actualizar" usa `alRecargar`. */
+  function seccionRecordatorio(): HTMLElement {
+    return h(
+      'div',
+      { className: 'seccion-recordatorio' },
+      h('h3', {}, 'Recordatorio'),
+      crearAccionesRecordatorio({
+        turnoId: turno.id,
+        etiqueta: nombrePaciente(turno.paciente),
+        tieneTelefono: null,
+        tieneEmail: null,
+        api: opciones.recordatorios,
+        sinConfirmar: opciones.sinConfirmar,
+        alResultado: () => undefined,
+        alActualizar: () => recargar(),
+      }),
+    );
+  }
+
   const destinos = transicionesPermitidas(turno.estado);
   const acciones: HTMLButtonElement[] = [];
   if (destinos.includes('CONFIRMADO')) acciones.push(boton('Confirmar', () => cambiarEstado('CONFIRMADO')));
@@ -124,6 +154,7 @@ export function abrirAccionesTurno(opciones: OpcionesAcciones): Dialogo | null {
     ...(hayAsistencia && !asistenciaHabilitada ? [h('p', { id: idAviso, className: 'aviso-asistencia' }, MSG_ASISTENCIA_FUTURA)] : []),
     zona.alerta,
     zona.acciones,
+    ...(esRecordable(turno.estado) ? [seccionRecordatorio()] : []),
   ];
   const tituloAcciones = `Turno de ${nombrePaciente(turno.paciente)}`;
 

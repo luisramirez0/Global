@@ -297,6 +297,7 @@ describe('7.2 la agenda es la entrada (HOME_PATH = /agenda)', () => {
 describe('7.2 roles y menú', () => {
   const BASE = [
     ['Agenda', '#/agenda'],
+    ['Recordatorios', '#/recordatorios'],
     ['Configuración', '#/config/sillones'],
   ];
   const CON_AUDITORIA = [...BASE, ['Auditoría', '#/auditoria']];
@@ -361,6 +362,30 @@ describe('7.2 roles y menú', () => {
   });
 });
 
+describe('recordatorios (C-14)', () => {
+  it.each(['ADMIN', 'PROFESIONAL', 'RECEPCION'] as const)('%s abre #/recordatorios: h1 enfocado y pide los pendientes de mañana con el token', async (rol) => {
+    storeSession();
+    window.history.replaceState(null, '', '#/recordatorios');
+    const fetchFn = apiFalsa(meConRol(rol));
+    await mount(fetchFn).ready;
+    const h1 = main().querySelector('h1');
+    expect(h1?.textContent).toBe('Recordatorios');
+    expect(document.activeElement).toBe(h1);
+    expect(document.querySelector('nav[aria-label="Principal"] a[href="#/recordatorios"]')?.textContent).toBe('Recordatorios');
+    await vi.waitFor(() => expect(urlsPedidas(fetchFn).some((u) => /\/turnos\/pendientes-recordatorio\?fecha=\d{4}-\d{2}-\d{2}$/.test(u))).toBe(true));
+    const llamada = fetchFn.mock.calls.find((c) => String(c[0]).includes('/pendientes-recordatorio'));
+    expect(new Headers(llamada?.[1]?.headers).get('Authorization')).toBe('Bearer t1');
+  });
+
+  it('sin sesión, #/recordatorios lleva a #/login sin pedir nada', async () => {
+    window.history.replaceState(null, '', '#/recordatorios');
+    const fetchFn = vi.fn<typeof fetch>();
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/login');
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+});
+
 describe('auditoría (C-15)', () => {
   const PAGINA_VACIA = { contenido: [], pagina: 0, tamanio: 20, totalElementos: 0, totalPaginas: 0 };
 
@@ -397,5 +422,72 @@ describe('auditoría (C-15)', () => {
     await mount(fetchFn).ready;
     expect(window.location.hash).toBe('#/login');
     expect(fetchFn).not.toHaveBeenCalled();
+  });
+});
+
+describe('B1 (revisión de C-14) el registro de envíos se vacía al terminar la sesión', () => {
+  const PENDIENTE = {
+    turnoId: 7,
+    inicio: '2026-11-26T13:00:00Z',
+    fin: '2026-11-26T13:30:00Z',
+    estado: 'PROGRAMADO',
+    paciente: { id: 5, nombre: 'Ana', apellido: 'Pérez' },
+    profesional: { id: 7, nombre: 'Marta', apellido: 'Ríos' },
+    tieneTelefono: true,
+    tieneEmail: true,
+    ultimoRecordatorio: null,
+  };
+  const LOGIN = { accessToken: 'tok', tokenType: 'Bearer', expiresIn: 1800, usuario: { id: 2, nombre: 'Ana', rol: 'ADMIN' }, consultorioId: 2 };
+
+  /** Email del turno 7: 500 (incierto). WhatsApp: 401 (cierra la sesión por vencimiento). */
+  function api() {
+    return vi.fn<typeof fetch>((input) => {
+      const url = String(input);
+      if (url.endsWith('/auth/login')) return Promise.resolve(jsonResponse(200, LOGIN));
+      if (url.endsWith('/auth/me')) return Promise.resolve(jsonResponse(200, ME_OK));
+      if (url.includes('/pendientes-recordatorio')) return Promise.resolve(jsonResponse(200, [PENDIENTE]));
+      if (url.endsWith('/recordatorio/email')) return Promise.resolve(problemResponse(500));
+      if (url.endsWith('/recordatorio/whatsapp')) return Promise.resolve(problemResponse(401));
+      return apiFalsa()(input);
+    });
+  }
+  const emailBtn = (): HTMLButtonElement => {
+    const b = [...main().querySelectorAll('button')].find((x) => x.textContent === 'Email');
+    if (b === undefined) throw new Error('sin Email');
+    return b;
+  };
+  async function loginYIrARecordatorios(): Promise<void> {
+    const email = main().querySelector<HTMLInputElement>('input[name="email"]');
+    const password = main().querySelector<HTMLInputElement>('input[name="password"]');
+    if (email === null || password === null) throw new Error('sin campos');
+    email.value = 'ana@consultorio.test';
+    password.value = 'Segura123!';
+    main().querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
+    await vi.waitFor(() => expect(window.location.hash).toBe('#/agenda'));
+    window.location.hash = '#/recordatorios';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await vi.waitFor(() => expect(emailBtn()).toBeDefined());
+  }
+
+  it.each([
+    ['cierre de sesión manual', async () => {
+      ([...document.querySelectorAll('header button')].find((b) => b.textContent === 'Cerrar sesión') as HTMLButtonElement).click();
+    }],
+    ['401 automático', async () => {
+      [...main().querySelectorAll('button')].find((b) => b.textContent === 'WhatsApp')?.click();
+      await vi.waitFor(() => expect(window.location.hash).toBe('#/login'));
+    }],
+  ])('%s: tras volver a iniciar sesión, "Email" del turno marcado vuelve a estar habilitado', async (_n, terminarSesion) => {
+    storeSession();
+    window.history.replaceState(null, '', '#/recordatorios');
+    await mount(api()).ready;
+    await vi.waitFor(() => expect(emailBtn()).toBeDefined());
+    emailBtn().click();
+    await vi.waitFor(() => expect(main().textContent).toContain('Envío por email sin confirmar'));
+    await terminarSesion();
+    expect(window.location.hash).toBe('#/login');
+    expect(main().querySelector('.recordatorio-item')).toBeNull();
+    await loginYIrARecordatorios();
+    expect(emailBtn().disabled).toBe(false);
   });
 });

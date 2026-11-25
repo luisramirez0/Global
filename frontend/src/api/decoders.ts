@@ -2,11 +2,16 @@ import { ApiError } from './errors';
 import { esInstanteIso } from './instante';
 import {
   ACCIONES_AUDITORIA,
+  CANALES_RECORDATORIO,
+  ESTADOS_RECORDATORIO,
   ESTADOS_TURNO,
   ROLES,
   type AccionAuditoria,
   type Bloqueo,
+  type CanalRecordatorio,
   type DiaSemana,
+  type EnlaceWhatsApp,
+  type EstadoRecordatorio,
   type EntradaAuditoria,
   type EstadoTurno,
   type ExportPaciente,
@@ -16,10 +21,14 @@ import {
   type Paciente,
   type Pagina,
   type Prestacion,
+  type PersonaResumen,
+  type RecordatorioEmail,
   type RegistroResponse,
   type Rol,
   type Sillon,
   type Turno,
+  type TurnoPendiente,
+  type UltimoRecordatorio,
   type ValorDetalle,
 } from './types';
 
@@ -275,4 +284,66 @@ export function decodeExportPaciente(value: unknown): ExportPaciente {
   const o = obj(value);
   obj(o['paciente']);
   return o;
+}
+
+/* Recordatorios (C-09). */
+
+function estadoRecordatorio(o: Obj, key: string): EstadoRecordatorio {
+  const found = ESTADOS_RECORDATORIO.find((e) => e === o[key]);
+  if (found === undefined) fail();
+  return found;
+}
+
+function canalRecordatorio(o: Obj, key: string): CanalRecordatorio {
+  const found = CANALES_RECORDATORIO.find((c) => c === o[key]);
+  if (found === undefined) fail();
+  return found;
+}
+
+/** Solo `https://wa.me/...` (host exacto, sin credenciales ni puerto); cualquier otro destino es inesperado (C-14, D2). */
+function enlaceWa(o: Obj, key: string): string {
+  const v = str(o, key, { nonEmpty: true });
+  let url: URL;
+  try {
+    url = new URL(v);
+  } catch {
+    return fail();
+  }
+  if (url.protocol !== 'https:' || url.hostname !== 'wa.me' || url.username !== '' || url.password !== '' || url.port !== '') fail();
+  return v;
+}
+
+export function decodeEnlaceWhatsApp(value: unknown): EnlaceWhatsApp {
+  const o = obj(value);
+  return { recordatorioId: id(o, 'recordatorioId'), enlace: enlaceWa(o, 'enlace'), generadoEn: instant(o, 'generadoEn') };
+}
+
+export function decodeRecordatorioEmail(value: unknown): RecordatorioEmail {
+  const o = obj(value);
+  return { recordatorioId: id(o, 'recordatorioId'), estado: estadoRecordatorio(o, 'estado'), enviadoEn: instant(o, 'enviadoEn') };
+}
+
+function decodeUltimoRecordatorio(value: unknown): UltimoRecordatorio {
+  const o = obj(value);
+  return { canal: canalRecordatorio(o, 'canal'), estado: estadoRecordatorio(o, 'estado'), generadoEn: instant(o, 'generadoEn') };
+}
+
+function persona(o: Obj, key: string): PersonaResumen {
+  const p = obj(o[key]);
+  return { id: id(p, 'id'), nombre: str(p, 'nombre'), apellido: str(p, 'apellido') };
+}
+
+export function decodeTurnoPendiente(value: unknown): TurnoPendiente {
+  const o = obj(value);
+  return {
+    turnoId: id(o, 'turnoId'),
+    inicio: instant(o, 'inicio'),
+    fin: instant(o, 'fin'),
+    estado: estadoTurno(o, 'estado'),
+    paciente: persona(o, 'paciente'),
+    profesional: persona(o, 'profesional'),
+    tieneTelefono: bool(o, 'tieneTelefono'),
+    tieneEmail: bool(o, 'tieneEmail'),
+    ultimoRecordatorio: o['ultimoRecordatorio'] === null || o['ultimoRecordatorio'] === undefined ? null : decodeUltimoRecordatorio(o['ultimoRecordatorio']),
+  };
 }
