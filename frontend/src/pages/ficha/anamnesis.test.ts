@@ -42,12 +42,12 @@ function anamnesis(root: HTMLElement): HTMLElement {
 const CONFLICTO = (): ApiError => new ApiError('conflict', { status: 409, codigo: 'FICHA_DESACTUALIZADA' });
 
 describe('formulario', () => {
-  it('seis áreas de texto con label y máximo 4000, y embarazo de tres estados', async () => {
+  it('seis áreas de texto con label, sin maxlength (no cortan en silencio, A-D5b), y embarazo de tres estados', async () => {
     const { root } = await montar();
     for (const name of ['alergias', 'medicacionActual', 'antecedentesMedicos', 'enfermedadesRelevantes', 'motivoConsulta', 'observaciones']) {
       const t = textarea(root, name);
       expect(root.querySelector(`label[for="${t.id}"]`), name).not.toBeNull();
-      expect(t.maxLength, name).toBe(4000);
+      expect(t.hasAttribute('maxlength'), name).toBe(false);
     }
     expect([...select(root, 'embarazo').options].map((o) => [o.value, o.textContent])).toEqual([
       ['', 'Sin dato'],
@@ -250,6 +250,81 @@ describe('409 FICHA_DESACTUALIZADA (A-D5)', () => {
     await flush();
     expect(buttons(root, 'Cargar la versión actual')).toHaveLength(0);
     expect(anamnesis(root).querySelector('[role="alert"]')?.textContent).toBe('Ocurrió un error. Intentá de nuevo.');
+  });
+});
+
+describe('texto pegado de más de 4000 (A-D5b)', () => {
+  function pegar(t: HTMLTextAreaElement, valor: string): void {
+    t.value = valor;
+    t.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  it('avisa en el momento con la cuenta y no corta el texto', async () => {
+    const { root } = await montar();
+    pegar(textarea(root, 'antecedentesMedicos'), 'a'.repeat(4500));
+    expect(textarea(root, 'antecedentesMedicos').value).toHaveLength(4500);
+    expect(errorOf(root, 'antecedentesMedicos')).toBe('Máximo 4000 caracteres (hay 4500).');
+  });
+
+  it('no se puede guardar mientras se pase: sin request y el aviso sigue', async () => {
+    const { ctx, root } = await montar();
+    pegar(textarea(root, 'antecedentesMedicos'), 'a'.repeat(4001));
+    enviar(form(root));
+    await flush();
+    expect(ctx.ficha.guardarFicha).not.toHaveBeenCalled();
+    expect(errorOf(root, 'antecedentesMedicos')).toBe('Máximo 4000 caracteres (hay 4001).');
+    expect(textarea(root, 'antecedentesMedicos').value).toHaveLength(4001);
+  });
+
+  it('al recortarlo a 4000 se limpia el aviso y se guarda completo', async () => {
+    const ctx = contextoFicha();
+    ctx.ficha.guardarFicha.mockResolvedValue(FICHA_V3);
+    const { root } = await montar({}, ctx);
+    pegar(textarea(root, 'antecedentesMedicos'), 'a'.repeat(4001));
+    pegar(textarea(root, 'antecedentesMedicos'), 'a'.repeat(4000));
+    expect(errorOf(root, 'antecedentesMedicos')).toBe('');
+    enviar(form(root));
+    await flush();
+    expect(ctx.ficha.guardarFicha.mock.calls[0]?.[1].antecedentesMedicos).toHaveLength(4000);
+  });
+});
+
+describe('dispose limpia los datos clínicos (D8)', () => {
+  it('tras un 409, al salir no queda en la página ni lo escrito ni la ficha ni el paciente', async () => {
+    const ctx = contextoFicha();
+    ctx.ficha.guardarFicha.mockRejectedValue(CONFLICTO());
+    const { page, root } = await montar({}, ctx);
+    textarea(root, 'alergias').value = 'Texto sin guardar tras el conflicto';
+    enviar(form(root));
+    await flush();
+    expect(root.textContent).toContain(MSG_FICHA_DESACTUALIZADA);
+    page.dispose?.();
+    actual = null;
+    expect(root.querySelectorAll('textarea, select, input')).toHaveLength(0);
+    expect(seccion(root, 'Anamnesis')).toBeNull();
+    expect(seccion(root, 'Notas clínicas')).toBeNull();
+    const texto = root.textContent ?? '';
+    for (const dato of ['Texto sin guardar', 'Penicilina', 'Hipertensión', 'Pérez', '30111222', 'Control de rutina']) {
+      expect(texto, dato).not.toContain(dato);
+    }
+  });
+
+  it('una recarga pendiente que llega después de salir no vuelve a pintar datos', async () => {
+    const ctx = contextoFicha();
+    ctx.ficha.guardarFicha.mockRejectedValue(CONFLICTO());
+    const { page, root } = await montar({}, ctx);
+    enviar(form(root));
+    await flush();
+    const pendiente = deferred<Ficha>();
+    ctx.ficha.obtenerFicha.mockReturnValueOnce(pendiente.promise);
+    buttons(root, 'Cargar la versión actual')[0]?.click();
+    buttons(root, 'Cargar y descartar mis cambios')[0]?.click();
+    page.dispose?.();
+    actual = null;
+    pendiente.resolve({ ...FICHA_V3, alergias: 'Llegó tarde' });
+    await flush();
+    expect(root.textContent).not.toContain('Llegó tarde');
+    expect(root.querySelectorAll('textarea')).toHaveLength(0);
   });
 });
 

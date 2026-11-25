@@ -111,7 +111,14 @@ export function crearAnamnesis(opciones: AnamnesisOpciones): Anamnesis {
   let ocupado = false;
 
   const area = (campo: (typeof CAMPOS_TEXTO_FICHA)[number]): TextAreaField =>
-    createTextAreaField({ id: `anamnesis-${campo}`, name: campo, label: ETIQUETAS_ANAMNESIS[campo], maxLength: MAX_CAMPO_FICHA, rows: 3 });
+    createTextAreaField({
+      id: `anamnesis-${campo}`,
+      name: campo,
+      label: ETIQUETAS_ANAMNESIS[campo],
+      maxLength: MAX_CAMPO_FICHA,
+      rows: 3,
+      avisarExceso: true,
+    });
   const textos: Record<(typeof CAMPOS_TEXTO_FICHA)[number], TextAreaField> = {
     alergias: area('alergias'),
     medicacionActual: area('medicacionActual'),

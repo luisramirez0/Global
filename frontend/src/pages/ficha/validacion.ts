@@ -4,6 +4,7 @@
  * de aceptación del consentimiento. El servidor sigue siendo la fuente de verdad (A-D9).
  */
 import type { FichaRequest } from '../../api/types';
+import { mensajeExceso } from '../../components/form';
 import { MSG_REQUIRED } from '../auth/validation';
 
 export const MAX_CAMPO_FICHA = 4000;
@@ -11,8 +12,6 @@ export const MAX_NOTA = 10_000;
 
 export const MSG_EMBARAZO = 'Elegí una opción.';
 export const MSG_ACEPTACION = 'Marcá la casilla para confirmar que el paciente aceptó el texto.';
-
-const maxMsg = (max: number): string => `Máximo ${max} caracteres.`;
 
 /** Valores del select de embarazo (tres estados, D5). */
 export const EMBARAZO_OPCIONES = [
@@ -60,7 +59,7 @@ function embarazoDe(value: string): boolean | null | undefined {
 export function validarFicha(valores: ValoresFicha, version: number | null): Resultado<FichaRequest, CampoFicha> {
   const errors: Partial<Record<CampoFicha, string>> = {};
   for (const campo of CAMPOS_TEXTO_FICHA) {
-    if (valores[campo].length > MAX_CAMPO_FICHA) errors[campo] = maxMsg(MAX_CAMPO_FICHA);
+    if (valores[campo].length > MAX_CAMPO_FICHA) errors[campo] = mensajeExceso(MAX_CAMPO_FICHA, valores[campo].length);
   }
   const embarazo = embarazoDe(valores.embarazo);
   if (embarazo === undefined) errors.embarazo = MSG_EMBARAZO;
@@ -82,7 +81,7 @@ export function validarFicha(valores: ValoresFicha, version: number | null): Res
 
 export function validarNota(valor: string): Resultado<string, 'texto'> {
   if (valor.trim() === '') return { ok: false, errors: { texto: MSG_REQUIRED } };
-  if (valor.length > MAX_NOTA) return { ok: false, errors: { texto: maxMsg(MAX_NOTA) } };
+  if (valor.length > MAX_NOTA) return { ok: false, errors: { texto: mensajeExceso(MAX_NOTA, valor.length) } };
   return { ok: true, value: valor };
 }
 

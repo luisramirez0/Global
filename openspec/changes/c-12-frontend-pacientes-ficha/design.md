@@ -79,7 +79,12 @@ Contrato real verificado en el código (`paciente/abm`, `paciente/ficha`, `secur
   - **Lo escrito se conserva** en el formulario y no se toca la `version`.
   - Se ofrece "Cargar la versión actual". Recién con esa acción se hace `GET /ficha`, que reemplaza el formulario y la `version`; antes, una confirmación avisa que se pierde lo escrito.
   - No hay reintento automático ni se fusionan cambios.
-
+- **A-D5b, texto de más** (pedido por la persona, 2026-11-25): las áreas de texto clínicas (anamnesis y notas) **no llevan `maxlength`**, porque el navegador cortaría en silencio un texto pegado.
+  - Apenas el texto supera el máximo (4000 o 10000), se muestra el error "Máximo N caracteres (hay M)." y el texto se conserva completo.
+  - No se puede guardar hasta que se recorte; la validación al enviar usa el mismo mensaje.
+  - Va con `createTextAreaField({ avisarExceso: true })`.
+  - jsdom no reproduce el corte que hace el navegador al pegar: los tests verifican la ausencia del atributo y el aviso. El corte real conviene verificarlo a mano.
+- **Salida de la página (D8)**: `dispose` vacía el cuerpo y el encabezado y libera la anamnesis. Hay tests que verifican que no queda en la página nada de lo escrito tras un 409, ni la ficha ni el paciente, y que una recarga pendiente no vuelve a pintar datos. JavaScript no permite verificar que el recolector de basura libere la memoria: lo que se prueba es que la página no conserva referencias visibles.
 ### D6 — Paciente dado de baja
 - Ficha, consentimientos y notas se ven **en solo lectura**, con el aviso "Paciente dado de baja: la historia clínica es de solo lectura".
   - No se crean el formulario de anamnesis, el de nota ni el registro de consentimiento.

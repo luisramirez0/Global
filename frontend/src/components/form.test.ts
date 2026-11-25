@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyFieldErrors, createField, createSelectField, createTextAreaField } from './form';
+import { applyFieldErrors, createField, createSelectField, createTextAreaField, mensajeExceso } from './form';
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -189,5 +189,45 @@ describe('createTextAreaField (C-12)', () => {
     applyFieldErrors([input, area], { b: 'Mal' });
     expect(document.activeElement).toBe(area.textarea);
     expect(input.input.hasAttribute('aria-invalid')).toBe(false);
+  });
+});
+
+/* C-12b (A-D5b): un texto pegado de más del máximo no se corta en silencio; se avisa con un error. */
+describe('createTextAreaField con avisarExceso (C-12b)', () => {
+  function teclear(t: HTMLTextAreaElement, valor: string): void {
+    t.value = valor;
+    t.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  it('no pone el atributo maxlength, porque el navegador cortaría en silencio un texto pegado', () => {
+    const f = createTextAreaField({ id: 'a', name: 'a', label: 'A', maxLength: 10, avisarExceso: true });
+    expect(f.textarea.hasAttribute('maxlength')).toBe(false);
+  });
+
+  it('al pasarse del máximo avisa con la cuenta y conserva el texto completo', () => {
+    const f = createTextAreaField({ id: 'a', name: 'a', label: 'A', maxLength: 10, avisarExceso: true });
+    document.body.append(f.element);
+    teclear(f.textarea, 'x'.repeat(15));
+    expect(f.value()).toHaveLength(15);
+    expect(document.getElementById('a-error')?.textContent).toBe('Máximo 10 caracteres (hay 15).');
+    expect(f.textarea.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('al volver al máximo se limpia el aviso', () => {
+    const f = createTextAreaField({ id: 'a', name: 'a', label: 'A', maxLength: 10, avisarExceso: true });
+    document.body.append(f.element);
+    teclear(f.textarea, 'x'.repeat(11));
+    teclear(f.textarea, 'x'.repeat(10));
+    expect(document.getElementById('a-error')?.textContent).toBe('');
+    expect(f.textarea.hasAttribute('aria-invalid')).toBe(false);
+  });
+
+  it('sin avisarExceso se comporta como antes (maxlength)', () => {
+    const f = createTextAreaField({ id: 'a', name: 'a', label: 'A', maxLength: 10 });
+    expect(f.textarea.maxLength).toBe(10);
+  });
+
+  it('mensajeExceso arma el texto con el máximo y la cantidad', () => {
+    expect(mensajeExceso(4000, 4500)).toBe('Máximo 4000 caracteres (hay 4500).');
   });
 });

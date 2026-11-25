@@ -180,7 +180,7 @@
 >
 > **Orden acordado (2026-11-25):** `/pacientes/:id/ficha` se registra recién en 5.9, después de que pase la 5.7 (RECEPCION sin requests). Hasta entonces siguen vigentes los tests de C-12a 3.4 (`app.test.ts`, `routes.test.ts`) y 4.4 (`lista.test.ts`).
 
-- [x] 5.4 (20 tests en `pages/ficha/anamnesis.test.ts`; RED real 20/20 contra la vista de solo lectura de 5.3. Un 409 sin código no es `FICHA_DESACTUALIZADA`: mensaje genérico, sin "Cargar la versión actual". Un `409 CONSENTIMIENTO_REQUERIDO` al guardar vuelve al bloqueo) RED: **anamnesis** (D5, A-D5):
+- [x] 5.4 (25 tests en `pages/ficha/anamnesis.test.ts`, con los ajustes de abajo; RED real 20/20 contra la vista de solo lectura de 5.3. Un 409 sin código no es `FICHA_DESACTUALIZADA`: mensaje genérico, sin "Cargar la versión actual". Un `409 CONSENTIMIENTO_REQUERIDO` al guardar vuelve al bloqueo) RED: **anamnesis** (D5, A-D5):
   - Primera carga con `version: null` y blancos → `null`.
   - Guardado con la `version` leída; tres estados de `embarazo`.
   - `409 FICHA_DESACTUALIZADA` conserva lo escrito y la `version`.
@@ -188,6 +188,16 @@
   - Errores por campo del servidor.
 
   GREEN: `pages/ficha/anamnesis.ts`.
+> **Ajustes de la 5.4 pedidos por la persona (2026-11-25).**
+> - **Dispose**: 2 tests nuevos.
+>   - Tras un 409 con texto sin guardar, al salir no queda en la página ningún campo ni dato: lo escrito, la ficha, el paciente o las notas.
+>   - Una recarga pendiente que llega después de salir no vuelve a pintar datos.
+>
+>   Los dos pasaron sin cambiar código: la limpieza ya funcionaba y quedan como protección.
+> - **A-D5b, texto pegado de más de 4000**: con `maxlength`, el navegador cortaba en silencio. Ahora no hay atributo, se avisa en el momento con la cuenta y no se puede guardar.
+>   - Tests: 3 en la anamnesis y 5 en `form.test.ts`. El test de `maxLength` de la 5.4 pasó a verificar la ausencia del atributo.
+>   - Mutación: E1 (vuelve el `maxlength`) y E2 (sin aviso al tipear) mueren, cada uno con 2 tests.
+
 > **Nota de mutación (5.4, 2026-11-25).** Sobre `anamnesis.ts`, sin commitear, restaurado desde una copia en memoria. Mueren los 5:
 > - **M1, ante el 409 llama a `recargar()`**: fallan 4 tests. `recargar()` no llega a pedir nada porque `ocupado` sigue en `true`; en la práctica este mutante quita la UI del conflicto.
 > - **M1b, ante el 409 pide la ficha y pisa el formulario**: fallan 5 tests, entre ellos `lo escrito se conserva y no se vuelve a pedir la ficha`.

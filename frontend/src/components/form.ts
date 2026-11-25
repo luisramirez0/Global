@@ -133,6 +133,16 @@ export interface TextAreaFieldOptions {
   maxLength: number;
   required?: boolean;
   rows?: number;
+  /**
+   * C-12b (A-D5b): sin atributo `maxlength`, porque el navegador cortaría en silencio un texto pegado. En su lugar,
+   * al pasarse del máximo se muestra un error con la cuenta y el texto se conserva completo.
+   */
+  avisarExceso?: boolean;
+}
+
+/** Aviso de exceso de largo con la cantidad actual (C-12b, A-D5b). */
+export function mensajeExceso(max: number, actual: number): string {
+  return `Máximo ${max} caracteres (hay ${actual}).`;
 }
 
 export interface TextAreaField extends FormControl {
@@ -144,12 +154,24 @@ export interface TextAreaField extends FormControl {
 
 /** Área de texto accesible (C-12, D9): mismo esquema de label y error que `createField`. */
 export function createTextAreaField(options: TextAreaFieldOptions): TextAreaField {
-  const textarea = h('textarea', {
-    id: options.id,
-    attrs: { name: options.name, maxlength: String(options.maxLength), required: options.required ?? false },
-  });
+  const avisar = options.avisarExceso ?? false;
+  const attrs: Record<string, string | boolean> = { name: options.name, required: options.required ?? false };
+  if (!avisar) attrs['maxlength'] = String(options.maxLength);
+  const textarea = h('textarea', { id: options.id, attrs });
   if (options.rows !== undefined) textarea.rows = options.rows;
   const error = h('p', { id: `${options.id}-error`, className: 'error-campo' });
+  if (avisar) {
+    let excedido = false;
+    textarea.addEventListener('input', () => {
+      if (textarea.value.length > options.maxLength) {
+        excedido = true;
+        markError(textarea, error, mensajeExceso(options.maxLength, textarea.value.length));
+      } else if (excedido) {
+        excedido = false;
+        markError(textarea, error, null);
+      }
+    });
+  }
   const element = h('div', { className: 'campo' }, h('label', { attrs: { for: options.id } }, options.label), textarea, error);
   return {
     name: options.name,
