@@ -29,7 +29,9 @@ describe('rutas de pacientes (C-12a)', () => {
     expect(NAV_ITEMS.every((item) => ROUTES.some((r) => r.path === item.path))).toBe(true);
   });
 
-  it('la ficha no está registrada en C-12a (la registra C-12b)', () => {
-    expect(ROUTES.some((r) => r.path.endsWith('/ficha') || r.path.includes('ficha'))).toBe(false);
+  it('C-12b (5.9, reemplaza el caso de C-12a): /pacientes/:id/ficha está registrada y es protegida', () => {
+    const route = ROUTES.find((r) => r.path === '/pacientes/:id/ficha');
+    expect(route).toBeDefined();
+    expect(route?.guestOnly).not.toBe(true);
   });
 });

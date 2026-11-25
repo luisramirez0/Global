@@ -236,14 +236,21 @@ describe('botones por rol (D2)', () => {
     expect(buttonLabeled(root, 'Reactivar a Díaz, Rosa')).toBeDefined();
   });
 
-  it.each(['ADMIN', 'PROFESIONAL', 'RECEPCION'] as const)(
-    'C-12a: %s no ve enlace ni botón "Ficha" ni un href a /ficha (C-12b reemplaza este caso)',
+  it.each(['ADMIN', 'PROFESIONAL'] as const)(
+    'C-12b (5.9, reemplaza el caso de C-12a): %s ve el enlace "Ficha" en cada fila, al /ficha de ese paciente',
     async (rol) => {
       const { root } = await montar(rol);
-      expect([...root.querySelectorAll('a, button')].filter((el) => el.textContent === 'Ficha')).toHaveLength(0);
-      expect([...root.querySelectorAll('a')].filter((a) => (a.getAttribute('href') ?? '').endsWith('/ficha'))).toHaveLength(0);
+      const enlaces = [...root.querySelectorAll('a')].filter((a) => a.textContent === 'Ficha');
+      expect(enlaces.map((a) => a.getAttribute('href'))).toEqual(['#/pacientes/7/ficha', '#/pacientes/9/ficha']);
+      expect(enlaces.map((a) => a.getAttribute('aria-label'))).toEqual(['Ficha de Pérez, Ana', 'Ficha de Díaz, Rosa']);
     },
   );
+
+  it('C-12b (5.9): RECEPCION no ve enlace ni botón "Ficha" ni un href a /ficha', async () => {
+    const { root } = await montar('RECEPCION');
+    expect([...root.querySelectorAll('a, button')].filter((el) => el.textContent === 'Ficha')).toHaveLength(0);
+    expect([...root.querySelectorAll('a')].filter((a) => (a.getAttribute('href') ?? '').endsWith('/ficha'))).toHaveLength(0);
+  });
 });
 
 describe('dispose', () => {

@@ -3,7 +3,7 @@ import { createField } from '../../components/form';
 import type { Page } from '../../router/router';
 import { clear, h } from '../../utils/dom';
 import type { PageContext } from '../context';
-import { puedeDarDeBaja, rolActual } from '../permisos';
+import { puedeDarDeBaja, puedeVerFicha, rolActual } from '../permisos';
 import {
   MSG_BAJA_OK,
   MSG_CARGANDO,
@@ -25,6 +25,7 @@ export const TAMANIO_PAGINA = 20;
  */
 export function renderPacientes(ctx: PageContext): Page {
   const gestion = puedeDarDeBaja(rolActual(ctx));
+  const verFicha = puedeVerFicha(rolActual(ctx));
   let disposed = false;
   let seq = 0;
   let filtro: FiltroPacientes = { q: '', incluirInactivos: false, page: 0, size: TAMANIO_PAGINA };
@@ -80,6 +81,8 @@ export function renderPacientes(ctx: PageContext): Page {
   function acciones(p: Paciente): HTMLElement {
     const nombre = nombreCompleto(p);
     const celda = h('td', { className: 'acciones' }, h('a', { attrs: { href: `#/pacientes/${p.id}`, 'aria-label': `Editar ${nombre}` } }, 'Editar'));
+    // C-12b (5.9): enlace a la historia clínica solo para quien puede verla (D2, PA-07).
+    if (verFicha) celda.append(h('a', { attrs: { href: `#/pacientes/${p.id}/ficha`, 'aria-label': `Ficha de ${nombre}` } }, 'Ficha'));
     if (!gestion) return celda;
     if (!p.activo) {
       celda.append(boton('Reactivar', `Reactivar a ${nombre}`, () => void reactivar(p)));

@@ -250,16 +250,79 @@ describe('pacientes (C-12a)', () => {
   });
 });
 
-describe('ficha no registrada en C-12a (tasks 3.4; la reemplaza C-12b)', () => {
-  it.each(['#/pacientes/5/ficha', '#/pacientes/1/ficha'])(
-    'con sesión ADMIN %s es ruta desconocida: va a inicio y solo se pidió el me() del arranque',
+describe('ficha registrada (C-12b, tasks 5.9; reemplaza el caso 3.4 de C-12a)', () => {
+  const PACIENTE_5 = {
+    id: 5,
+    nombre: 'Ana',
+    apellido: 'Pérez',
+    dni: '30111222',
+    fechaNacimiento: null,
+    sexo: null,
+    telefono: null,
+    email: null,
+    direccion: null,
+    obraSocialTexto: null,
+    activo: true,
+  };
+  const TEXTO = { version: 'v1', contenido: 'Autorizo.', vigenteDesde: '2026-01-01T03:00:00Z' };
+
+  /** Responde según la URL: el orden de las requests en paralelo no importa. */
+  function api(rol: 'ADMIN' | 'PROFESIONAL' | 'RECEPCION'): ReturnType<typeof vi.fn<typeof fetch>> {
+    return vi.fn<typeof fetch>().mockImplementation((input) => {
+      const url = String(input);
+      if (url.endsWith('/auth/me')) return Promise.resolve(jsonResponse(200, { ...ME_OK, usuario: { ...ME_OK.usuario, rol } }));
+      if (url.endsWith('/pacientes/5')) return Promise.resolve(jsonResponse(200, PACIENTE_5));
+      if (url.endsWith('/pacientes/5/consentimientos')) return Promise.resolve(jsonResponse(200, []));
+      if (url.endsWith('/consentimientos/texto-vigente')) return Promise.resolve(jsonResponse(200, TEXTO));
+      return Promise.resolve(problemResponse(404, {}));
+    });
+  }
+
+  function rutas(fetchFn: ReturnType<typeof vi.fn<typeof fetch>>): string[] {
+    return fetchFn.mock.calls.map((c) => String(c[0]).replace('http://api.test/api', '')).sort();
+  }
+
+  it.each(['ADMIN', 'PROFESIONAL'] as const)('con %s, #/pacientes/5/ficha se resuelve y pide paciente, consentimientos y texto', async (rol) => {
+    storeSession();
+    window.history.replaceState(null, '', '#/pacientes/5/ficha');
+    const fetchFn = api(rol);
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/pacientes/5/ficha');
+    expect(main().querySelector('h1')?.textContent).toBe('Ficha clínica');
+    expect(document.title).toBe('Ficha clínica · Global');
+    await vi.waitFor(() => expect(main().textContent).toContain('Autorizo.'));
+    expect(rutas(fetchFn)).toEqual(['/auth/me', '/consentimientos/texto-vigente', '/pacientes/5', '/pacientes/5/consentimientos']);
+    expect(new Headers(fetchFn.mock.calls[1]?.[1]?.headers).get('Authorization')).toBe('Bearer t1');
+  });
+
+  it('con RECEPCION, #/pacientes/5/ficha muestra el aviso y solo se pidió el me() del arranque', async () => {
+    storeSession();
+    window.history.replaceState(null, '', '#/pacientes/5/ficha');
+    const fetchFn = api('RECEPCION');
+    await mount(fetchFn).ready;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(window.location.hash).toBe('#/pacientes/5/ficha');
+    expect(main().textContent).toContain('Sin permiso para ver la historia clínica.');
+    expect(rutas(fetchFn)).toEqual(['/auth/me']);
+  });
+
+  it('sin sesión, #/pacientes/5/ficha va al login sin requests', async () => {
+    window.history.replaceState(null, '', '#/pacientes/5/ficha');
+    const fetchFn = vi.fn<typeof fetch>();
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/login');
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it.each(['#/pacientes/abc/ficha', '#/pacientes/-1/ficha', '#/pacientes/0/ficha'])(
+    'con ADMIN, %s (id inválido) va a inicio y solo se pidió el me() del arranque',
     async (hash) => {
       storeSession();
       window.history.replaceState(null, '', hash);
-      const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK));
+      const fetchFn = api('ADMIN');
       await mount(fetchFn).ready;
       expect(window.location.hash).toBe('#/inicio');
-      expect(fetchFn.mock.calls.map((c) => String(c[0]))).toEqual(['http://api.test/api/auth/me']);
+      expect(rutas(fetchFn)).toEqual(['/auth/me']);
     },
   );
 });

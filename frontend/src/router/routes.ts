@@ -1,5 +1,6 @@
 import type { NavItem } from '../components/layout';
 import { renderBloqueos } from '../pages/config/bloqueos';
+import { renderFicha } from '../pages/ficha/ficha';
 import { renderHorarios } from '../pages/config/horarios';
 import { CONFIG_HOME } from '../pages/config/nav';
 import { renderPrestaciones } from '../pages/config/prestaciones';
@@ -28,10 +29,12 @@ export const ROUTES: readonly Route<PageContext>[] = [
   { path: '/config/prestaciones', render: renderPrestaciones },
   { path: '/config/horarios', render: renderHorarios },
   { path: '/config/bloqueos', render: renderBloqueos },
-  // Pacientes (C-12a). La ruta de la ficha se registra en C-12b.
+  // Pacientes (C-12a) y ficha clínica (C-12b). La ficha solo la ven ADMIN y PROFESIONAL: con otro rol la página
+  // muestra un aviso y no hace requests (tasks 5.7).
   { path: '/pacientes', render: renderPacientes },
   { path: '/pacientes/nuevo', render: renderNuevoPaciente },
   { path: '/pacientes/:id', render: renderPaciente },
+  { path: '/pacientes/:id/ficha', render: renderFicha },
 ];
 
 export const NAV_ITEMS: readonly NavItem[] = [

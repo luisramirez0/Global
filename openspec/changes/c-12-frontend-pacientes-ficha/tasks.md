@@ -270,7 +270,13 @@
 > - H4: el título lleva el nombre del paciente (4).
 > - H5: guarda el consentimiento en `sessionStorage` (2).
 
-- [ ] 5.9 **Registrar la ficha y su enlace**:
+- [x] 5.9 (RED real 6/6 en los reemplazos. `app.test.ts`, que responde según la URL para no depender del orden de las requests en paralelo:
+  - ADMIN y PROFESIONAL piden paciente, consentimientos y texto;
+  - RECEPCION solo el `me()` del arranque;
+  - sin sesión va al login;
+  - un id inválido en `/ficha` va a inicio.
+
+  En `routes.test.ts`, la ruta registrada y protegida. En `lista.test.ts`, el enlace con `href` y `aria-label` para ADMIN/PROFESIONAL y ninguno para RECEPCION. Contra `main`, 0 líneas borradas en los tests preexistentes. Mutación: mueren los 3, L1 enlace para todos los roles, L2 `href` a otro id y L3 ruta sin registrar) **Registrar la ficha y su enlace**:
   - Ruta `/pacientes/:id/ficha` en `routes.ts`.
   - Enlace "Ficha" en la lista, solo `GESTION`.
   - Se **reemplazan** los casos de C-12a 3.4 (la ruta ahora se resuelve: con `ADMIN` se piden paciente y consentimientos; con `RECEPCION`, ninguna request) y 4.4 (el enlace aparece para `ADMIN`/`PROFESIONAL` y no para `RECEPCION`).
