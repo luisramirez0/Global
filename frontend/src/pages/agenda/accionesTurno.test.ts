@@ -3,6 +3,7 @@
  * `/agenda` con sus componentes y dominio reales; solo la API está simulada con los mocks de test-support.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PROBLEM_422_TELEFONO } from '../../api/__fixtures__/recordatorios';
 import { PROBLEM_409_GENERICO, TURNO_MALICIOSO } from '../../api/__fixtures__/turnos';
 import type { Turno } from '../../api/types';
 import {
@@ -54,7 +55,7 @@ describe('6.1 acciones por estado', () => {
   it('turno PROGRAMADO que ya empezó: Confirmar, Cancelar, Reprogramar, Asistió y Ausente, todas habilitadas y en ese orden', async () => {
     await montarConTimers('ADMIN', { turnos: [PASADO] });
     abrirAcciones(100);
-    expect(textosBotonesDialogo()).toEqual(['Confirmar', 'Cancelar', 'Reprogramar', 'Asistió', 'Ausente', 'Cerrar']);
+    expect(textosBotonesDialogo()).toEqual(['Confirmar', 'Cancelar', 'Reprogramar', 'Asistió', 'Ausente', 'WhatsApp', 'Email', 'Cerrar']);
     for (const t of ['Confirmar', 'Cancelar', 'Reprogramar', 'Asistió', 'Ausente']) {
       expect(botonDialogo(t).hasAttribute('aria-disabled')).toBe(false);
       expect(botonDialogo(t).hasAttribute('disabled')).toBe(false);
@@ -71,7 +72,7 @@ describe('6.1 acciones por estado', () => {
   it('CONFIRMADO no ofrece "Confirmar" pero sí el resto', async () => {
     await montarConTimers('ADMIN', { turnos: [FUTURO_CONFIRMADO] });
     abrirAcciones(101);
-    expect(textosBotonesDialogo()).toEqual(['Cancelar', 'Reprogramar', 'Asistió', 'Ausente', 'Cerrar']);
+    expect(textosBotonesDialogo()).toEqual(['Cancelar', 'Reprogramar', 'Asistió', 'Ausente', 'WhatsApp', 'Email', 'Cerrar']);
   });
 
   it.each(['ASISTIO', 'AUSENTE', 'CANCELADO'] as const)('turno final %s: ninguna acción de estado ni Reprogramar', async (estado) => {
@@ -86,7 +87,7 @@ describe('6.1 acciones por estado', () => {
   it('RECEPCION ve las mismas acciones que ADMIN', async () => {
     await montarConTimers('RECEPCION', { turnos: [PASADO] });
     abrirAcciones(100);
-    expect(textosBotonesDialogo()).toEqual(['Confirmar', 'Cancelar', 'Reprogramar', 'Asistió', 'Ausente', 'Cerrar']);
+    expect(textosBotonesDialogo()).toEqual(['Confirmar', 'Cancelar', 'Reprogramar', 'Asistió', 'Ausente', 'WhatsApp', 'Email', 'Cerrar']);
   });
 
   it('con horarios de dos profesionales (DP-1) siguen disponibles Reprogramar y las acciones de estado', async () => {
@@ -96,7 +97,7 @@ describe('6.1 acciones por estado', () => {
     ];
     await montarConTimers('ADMIN', { turnos: [PASADO], horarios });
     abrirAcciones(100);
-    expect(textosBotonesDialogo()).toEqual(['Confirmar', 'Cancelar', 'Reprogramar', 'Asistió', 'Ausente', 'Cerrar']);
+    expect(textosBotonesDialogo()).toEqual(['Confirmar', 'Cancelar', 'Reprogramar', 'Asistió', 'Ausente', 'WhatsApp', 'Email', 'Cerrar']);
   });
 
   it('turno futuro: "Asistió" y "Ausente" con aria-disabled, enfocables y con el aviso por aria-describedby; "Cancelar" habilitado', async () => {
@@ -121,7 +122,7 @@ describe('6.1 acciones por estado', () => {
     await montarConTimers('ADMIN', { turnos: [FUTURO_CONFIRMADO] });
     abrirAcciones(101);
     const enfocables = [...(dialogo()?.querySelectorAll<HTMLElement>('button') ?? [])].filter((b) => !b.hasAttribute('disabled') && b.getAttribute('tabindex') !== '-1');
-    expect(enfocables.map((b) => b.textContent)).toEqual(['Cancelar', 'Reprogramar', 'Asistió', 'Ausente', 'Cerrar']);
+    expect(enfocables.map((b) => b.textContent)).toEqual(['Cancelar', 'Reprogramar', 'Asistió', 'Ausente', 'WhatsApp', 'Email', 'Cerrar']);
   });
 
   it('turno que empezó hace 5 minutos: "Asistió" envía {estado: "ASISTIO"} y se anuncia el resultado', async () => {
@@ -446,5 +447,172 @@ describe('6.4 errores sin recarga automática', () => {
     await tick();
     expect(ctx.turnos.listar).toHaveBeenCalledTimes(1);
     expect(anuncioAgenda()).toBe('');
+  });
+});
+
+describe('5.1 recordatorios en el diálogo del turno (C-14)', () => {
+  const botonesDe = (): string[] => textosBotonesDialogo();
+  const aviso = (b: HTMLElement): string => document.getElementById(b.getAttribute('aria-describedby') ?? '')?.textContent ?? '';
+  const ENLACE = { recordatorioId: 31, enlace: 'https://wa.me/5491122334455?text=Hola', generadoEn: '2026-11-24T15:00:00Z' };
+  const EMAIL_OK = { recordatorioId: 32, estado: 'ENVIADO' as const, enviadoEn: '2026-11-24T15:00:05Z' };
+
+  it.each([100, 101] as const)('el turno %s (100 PROGRAMADO, 101 CONFIRMADO) ofrece WhatsApp y Email', async (id) => {
+    await montarConTimers('ADMIN', { turnos: [PASADO, FUTURO_CONFIRMADO] });
+    abrirAcciones(id);
+    expect(botonesDe()).toContain('WhatsApp');
+    expect(botonesDe()).toContain('Email');
+  });
+
+  it.each(['ASISTIO', 'AUSENTE', 'CANCELADO'] as const)('un turno %s no ofrece WhatsApp ni Email', async (estado) => {
+    await montarConTimers('ADMIN', { turnos: [turnoAR(100, '10:00', { estado })] });
+    document.querySelector<HTMLInputElement>('input[name="cancelados"]')?.click();
+    await tick();
+    abrirAcciones(100);
+    expect(botonesDe()).toEqual(['Cerrar']);
+  });
+
+  it('abrir el diálogo no llama a la API de recordatorios', async () => {
+    const { ctx } = await montarConTimers('ADMIN', { turnos: [PASADO] });
+    abrirAcciones(100);
+    expect(ctx.recordatorios.enlaceWhatsApp).not.toHaveBeenCalled();
+    expect(ctx.recordatorios.enviarEmail).not.toHaveBeenCalled();
+  });
+
+  it('enlace 200: el diálogo sigue abierto con "Abrir WhatsApp" enfocado dentro y la agenda no se recarga', async () => {
+    const { ctx } = await montarConTimers('ADMIN', { turnos: [PASADO] });
+    ctx.recordatorios.enlaceWhatsApp.mockResolvedValue(ENLACE);
+    const listadas = ctx.turnos.listar.mock.calls.length;
+    abrirAcciones(100);
+    botonDialogo('WhatsApp').click();
+    await tick();
+    const enlace = [...(dialogo()?.querySelectorAll('a') ?? [])].find((a) => a.textContent === 'Abrir WhatsApp');
+    expect(enlace?.getAttribute('href')).toBe(ENLACE.enlace);
+    expect(document.activeElement).toBe(enlace);
+    expect(dialogo()?.contains(document.activeElement)).toBe(true);
+    expect(ctx.turnos.listar.mock.calls.length).toBe(listadas);
+    expect(ctx.turnos.cambiarEstado).not.toHaveBeenCalled();
+    expect(anuncioAgenda()).toBe('');
+  });
+
+  it('Tab queda atrapado: desde "Cerrar" vuelve al primer enfocable del diálogo, que contiene al enlace', async () => {
+    const { ctx } = await montarConTimers('ADMIN', { turnos: [PASADO] });
+    ctx.recordatorios.enlaceWhatsApp.mockResolvedValue(ENLACE);
+    abrirAcciones(100);
+    botonDialogo('WhatsApp').click();
+    await tick();
+    const d = dialogo();
+    const ultimo = botonDialogo('Cerrar');
+    ultimo.focus();
+    ultimo.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(d?.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toBe(ultimo);
+    expect(d?.querySelector('a[href]')).not.toBeNull();
+  });
+
+  it('422 telefono: botón deshabilitado con el aviso y el foco permanece en el diálogo', async () => {
+    const { ctx } = await montarConTimers('ADMIN', { turnos: [PASADO] });
+    ctx.recordatorios.enlaceWhatsApp.mockRejectedValue(http(422, PROBLEM_422_TELEFONO));
+    abrirAcciones(100);
+    botonDialogo('WhatsApp').focus();
+    botonDialogo('WhatsApp').click();
+    await tick();
+    expect(botonDialogo('WhatsApp').disabled).toBe(true);
+    expect(aviso(botonDialogo('WhatsApp'))).toBe('El paciente no tiene teléfono cargado.');
+    expect(dialogo()?.contains(document.activeElement)).toBe(true);
+    expect(dialogo()).not.toBeNull();
+  });
+
+  it('email 500: "Email" queda deshabilitado con el aviso y, al cerrar y reabrir, sigue deshabilitado', async () => {
+    const { ctx } = await montarConTimers('ADMIN', { turnos: [PASADO] });
+    ctx.recordatorios.enviarEmail.mockRejectedValue(http(500));
+    abrirAcciones(100);
+    botonDialogo('Email').click();
+    await tick();
+    expect(dialogo()).not.toBeNull();
+    expect(botonDialogo('Email').disabled).toBe(true);
+    expect(aviso(botonDialogo('Email'))).toBe('Envío por email sin confirmar: verificá con el paciente.');
+    botonDialogo('Cerrar').click();
+    abrirAcciones(100);
+    expect(botonDialogo('Email').disabled).toBe(true);
+    expect(aviso(botonDialogo('Email'))).toBe('Envío por email sin confirmar: verificá con el paciente.');
+    expect(ctx.recordatorios.enviarEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('email 201: queda deshabilitado con "Recordatorio enviado por email." también al reabrir', async () => {
+    const { ctx } = await montarConTimers('ADMIN', { turnos: [PASADO] });
+    ctx.recordatorios.enviarEmail.mockResolvedValue(EMAIL_OK);
+    abrirAcciones(100);
+    botonDialogo('Email').click();
+    await tick();
+    expect(botonDialogo('Email').disabled).toBe(true);
+    expect(aviso(botonDialogo('Email'))).toBe('Recordatorio enviado por email.');
+    botonDialogo('Cerrar').click();
+    abrirAcciones(100);
+    expect(botonDialogo('Email').disabled).toBe(true);
+    expect(aviso(botonDialogo('Email'))).toBe('Recordatorio enviado por email.');
+  });
+
+  it('el estado compartido con la página: un envío marcado antes de abrir el diálogo lo muestra deshabilitado', async () => {
+    const { ctx } = await montarConTimers('ADMIN', { turnos: [PASADO, FUTURO_CONFIRMADO] });
+    ctx.enviosSinConfirmar.marcarEnviado(100);
+    ctx.enviosSinConfirmar.marcar(101);
+    abrirAcciones(100);
+    expect(aviso(botonDialogo('Email'))).toBe('Recordatorio enviado por email.');
+    botonDialogo('Cerrar').click();
+    abrirAcciones(101);
+    expect(aviso(botonDialogo('Email'))).toBe('Envío por email sin confirmar: verificá con el paciente.');
+    expect(botonDialogo('WhatsApp').disabled).toBe(false);
+  });
+
+  it('email 502: no marca nada y "Email" sigue habilitado', async () => {
+    const { ctx } = await montarConTimers('ADMIN', { turnos: [PASADO] });
+    ctx.recordatorios.enviarEmail.mockRejectedValue(http(502));
+    abrirAcciones(100);
+    botonDialogo('Email').click();
+    await tick();
+    expect(botonDialogo('Email').disabled).toBe(false);
+    expect(ctx.enviosSinConfirmar.tiene(100)).toBe(false);
+    expect(ctx.enviosSinConfirmar.enviado(100)).toBe(false);
+  });
+
+  it.each([409, 404] as const)('%s: "Actualizar" en el diálogo llama al alRecargar existente (cierra y recarga la agenda)', async (status) => {
+    const { ctx } = await montarConTimers('ADMIN', { turnos: [PASADO] });
+    ctx.recordatorios.enlaceWhatsApp.mockRejectedValue(http(status));
+    abrirAcciones(100);
+    botonDialogo('WhatsApp').click();
+    await tick();
+    expect(dialogo()?.textContent).toContain(status === 409 ? 'El turno ya no admite recordatorios (cambió de estado).' : 'El turno ya no existe.');
+    const listadas = ctx.turnos.listar.mock.calls.length;
+    botonDialogo('Actualizar').click();
+    await tick();
+    expect(dialogo()).toBeNull();
+    expect(ctx.turnos.listar.mock.calls.length).toBe(listadas + 1);
+  });
+});
+
+describe('M1 (revisión de C-14) envío de email en curso entre aperturas del diálogo', () => {
+  it('cerrar y reabrir el diálogo durante el pedido: "Email" deshabilitado y ocupado, sin segundo envío; un 502 lo libera', async () => {
+    const pedido = deferred<{ recordatorioId: number; estado: 'ENVIADO'; enviadoEn: string }>();
+    const { ctx } = await montarConTimers('ADMIN', { turnos: [PASADO] });
+    ctx.recordatorios.enviarEmail.mockReturnValueOnce(pedido.promise).mockResolvedValueOnce({ recordatorioId: 2, estado: 'ENVIADO', enviadoEn: '2026-11-24T15:00:05Z' });
+    abrirAcciones(100);
+    botonDialogo('Email').click();
+    await tick();
+    botonDialogo('Cerrar').click();
+    abrirAcciones(100);
+    const b = botonDialogo('Email');
+    expect(b.disabled).toBe(true);
+    expect(b.getAttribute('aria-busy')).toBe('true');
+    b.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await tick();
+    expect(ctx.recordatorios.enviarEmail).toHaveBeenCalledTimes(1);
+    pedido.reject(http(502));
+    await tick();
+    botonDialogo('Cerrar').click();
+    abrirAcciones(100);
+    expect(botonDialogo('Email').disabled).toBe(false);
+    botonDialogo('Email').click();
+    await tick();
+    expect(ctx.recordatorios.enviarEmail).toHaveBeenCalledTimes(2);
   });
 });

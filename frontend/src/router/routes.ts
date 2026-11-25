@@ -7,6 +7,7 @@ import { renderPrestaciones } from '../pages/config/prestaciones';
 import { renderSillones } from '../pages/config/sillones';
 import type { PageContext } from '../pages/context';
 import { renderAgenda } from '../pages/agenda/agenda';
+import { renderRecordatorios } from '../pages/recordatorios/recordatorios';
 import { renderLogin } from '../pages/login/login';
 import { renderRegistro } from '../pages/registro/registro';
 import { HOME_PATH, LOGIN_PATH } from './paths';
@@ -23,6 +24,8 @@ export const ROUTES: readonly Route<PageContext>[] = [
   { path: '/registro', guestOnly: true, render: renderRegistro },
   // Agenda de turnos (C-13): es la entrada de la aplicación.
   { path: HOME_PATH, render: renderAgenda },
+  // Recordatorios de turnos por WhatsApp y email (C-14).
+  { path: '/recordatorios', render: renderRecordatorios },
   // Configuración de agenda (C-11).
   { path: '/config/sillones', render: renderSillones },
   { path: '/config/prestaciones', render: renderPrestaciones },
@@ -37,6 +40,7 @@ export const REDIRECTS: ReadonlyMap<string, string> = new Map([['/inicio', HOME_
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { path: HOME_PATH, label: 'Agenda' },
+  { path: '/recordatorios', label: 'Recordatorios' },
   { path: CONFIG_HOME, label: 'Configuración' },
   { path: '/auditoria', label: 'Auditoría', roles: ['ADMIN', 'PROFESIONAL'] },
 ];

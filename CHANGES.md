@@ -357,7 +357,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/05_reglas_de_negocio.md` §RN-AG
 
 ### [C-14] `frontend-recordatorios`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` implementado y verificado con tests (2026-11-25). **Pendiente**: commit/PR/merge con autorización de la persona y verificación manual contra el backend real; review de integrante-1/2. Evidencia: frontend 1494/1494 en 67 archivos (línea base 61 archivos / 1288 tests; +206 tests, strict TDD); lint y typecheck limpios; `openspec validate c-14-frontend-recordatorios --strict` válido; `git diff main -- backend` vacío; sin dependencias nuevas. Cliente tipado de C-09 con `cache: 'no-store'` y enlace `wa.me` validado; página `#/recordatorios` (mañana en la zona del consultorio, confirmar/cancelar); acciones compartidas con el diálogo de la agenda; email exitoso o sin confirmar queda deshabilitado en memoria. Se actualizaron solo 5 expectativas de `pages/agenda/accionesTurno.test.ts` (botones del diálogo y orden de Tab). Handoff: `knowledge-base/entrega/C-14.md`
 - **Resultado**: botón "Recordar por WhatsApp" abre `wa.me`; opción de email; lista de turnos de mañana sin recordatorio.
 - **Scope**:
   - `src/pages/recordatorios/` y botones en el turno: abre el enlace `wa.me` en pestaña nueva, deshabilitado y con aviso si no hay teléfono; envío de email con estado/errores.

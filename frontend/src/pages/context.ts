@@ -2,8 +2,10 @@ import type { AgendaConfigApi } from '../api/agendaConfig';
 import type { AuditoriaApi } from '../api/auditoria';
 import type { AuthApi } from '../api/auth';
 import type { PacientesApi } from '../api/pacientes';
+import type { RecordatoriosApi } from '../api/recordatorios';
 import type { TurnosApi } from '../api/turnos';
 import type { Session } from '../state/session';
+import type { RegistroEnviosSinConfirmar } from './recordatorios/dominio/enviosSinConfirmar';
 
 /** Lo que recibe cada página (design D3). C-11..C-15 lo amplían con sus clientes de API. */
 export interface PageContext {
@@ -16,6 +18,10 @@ export interface PageContext {
   pacientes: PacientesApi;
   /** Log de auditoría y export de pacientes (C-15). */
   auditoria: AuditoriaApi;
+  /** Recordatorios de turnos (C-14, C-09). */
+  recordatorios: RecordatoriosApi;
+  /** Turnos con envío de email sin confirmar; solo en memoria, compartido por página y agenda (C-14, D11). */
+  enviosSinConfirmar: RegistroEnviosSinConfirmar;
   session: Session;
   navigate(path: string): void;
   flash: Flash;

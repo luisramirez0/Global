@@ -24,3 +24,25 @@ describe('contextos de prueba (7.4, aditivo)', () => {
     expect(a.turnos).not.toBe(b.turnos);
   });
 });
+
+describe('contextos de prueba de recordatorios (C-14)', () => {
+  it('createTestContext trae el mock de recordatorios con los tres métodos y el registro vacío', () => {
+    const ctx = createTestContext();
+    expect(Object.keys(ctx.recordatorios).sort()).toEqual(['enlaceWhatsApp', 'enviarEmail', 'pendientes']);
+    expect(ctx.enviosSinConfirmar.tiene(7)).toBe(false);
+  });
+
+  it('cada contexto tiene su propio registro y sus propios mocks', () => {
+    const a = createTestContext();
+    const b = createTestContext();
+    a.enviosSinConfirmar.marcar(7);
+    expect(b.enviosSinConfirmar.tiene(7)).toBe(false);
+    expect(a.recordatorios).not.toBe(b.recordatorios);
+  });
+
+  it('createLoggedContext también incluye recordatorios', () => {
+    const ctx = createLoggedContext('RECEPCION');
+    expect(ctx.recordatorios.pendientes).toBeDefined();
+    expect(ctx.enviosSinConfirmar.tiene(1)).toBe(false);
+  });
+});
