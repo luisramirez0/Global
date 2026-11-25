@@ -13,6 +13,8 @@ public class CorsConfig {
 
 	private static final List<String> METHODS = List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
 	private static final List<String> HEADERS = List.of("Authorization", "Content-Type");
+	/** C-16: sin exponerlo, el navegador le oculta a la SPA (otro origen) el {@code Retry-After} del 429 de login. */
+	private static final List<String> EXPOSED_HEADERS = List.of("Retry-After");
 	private static final long MAX_AGE_SECONDS = 3600;
 
 	@Bean
@@ -21,6 +23,7 @@ public class CorsConfig {
 		cfg.setAllowedOrigins(props.cors().allowedOrigins());
 		cfg.setAllowedMethods(METHODS);
 		cfg.setAllowedHeaders(HEADERS);
+		cfg.setExposedHeaders(EXPOSED_HEADERS);
 		cfg.setAllowCredentials(false);
 		cfg.setMaxAge(MAX_AGE_SECONDS);
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

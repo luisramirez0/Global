@@ -392,7 +392,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/05_reglas_de_negocio.md` §RN-DS-02, §RN-DS-06
 
 ### [C-16] `entrega-hardening-demo`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[ ]` en curso (2026-11-25), rama `c-16-entrega-hardening-demo`: README, datos demo y smoke E2E por la API (`scripts/*.sh` y `.ps1`), guion, checklist de seguridad, bugs conocidos y verificaciones pendientes en `docs/`; CORS expone `Retry-After`, sin perfil por defecto, MySQL en `127.0.0.1` y headers de seguridad en nginx. **Pendiente**: que la persona levante el stack y corra el seed y el smoke, el ensayo con `docs/verificacion-manual.md` y `openspec validate --strict`. Handoff: `knowledge-base/entrega/C-16.md`
 - **Resultado**: `docker compose up` + seed deja una demo reproducible del flujo completo; checklist de seguridad y smoke E2E en verde.
 - **Scope**:
   - Smoke E2E: registro → configurar → paciente + consentimiento → turno (con conflicto 409) → recordatorio wa.me → auditoría/export.

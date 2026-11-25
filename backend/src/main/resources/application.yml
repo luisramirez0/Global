@@ -1,6 +1,6 @@
 spring:
-  profiles:
-    default: dev
+  # Sin perfil por defecto (C-16): un arranque sin SPRING_PROFILES_ACTIVE no activa el seed ni la
+  # configuración de desarrollo; falla al no tener base. docker-compose.yml fija `dev` y los tests `test`.
   autoconfigure:
     # Evita que Boot genere (y loguee) una contraseña en memoria (regla 5).
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
