@@ -7,6 +7,8 @@ import ar.global.odonto.consultorio.registro.EmailYaRegistradoException;
 import ar.global.odonto.paciente.abm.DatoInvalidoException;
 import ar.global.odonto.paciente.abm.DniDuplicadoException;
 import ar.global.odonto.paciente.ficha.ProfesionalNoVinculadoException;
+import ar.global.odonto.recordatorio.email.EmailNoConfiguradoException;
+import ar.global.odonto.recordatorio.email.EnvioEmailFallidoException;
 import ar.global.odonto.security.DemasiadosIntentosException;
 import ar.global.odonto.usuario.auth.CredencialesInvalidasException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -190,6 +192,27 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 				.header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
 				.body(problem(HttpStatus.TOO_MANY_REQUESTS, "Demasiados intentos",
 						"Esperá antes de volver a intentar."));
+	}
+
+	/**
+	 * ADICION DE C-09 en una clase compartida fuera de {@code recordatorio/}: marcada para review de integrante-1/2
+	 * (regla 12). {@code 502}: fallo el envio o la comunicacion con el servidor SMTP. ProblemDetail generico: sin
+	 * email, causa ni mensaje tecnico (la excepcion solo lleva un codigo fijo, que tampoco se expone).
+	 */
+	@ExceptionHandler(EnvioEmailFallidoException.class)
+	ResponseEntity<ProblemDetail> envioEmailFallido(EnvioEmailFallidoException ex) {
+		return of(problem(HttpStatus.BAD_GATEWAY, "No se pudo enviar el email",
+				"El servidor de correo no aceptó el envío. Probá nuevamente más tarde."));
+	}
+
+	/**
+	 * ADICION DE C-09 (misma marca de review que el handler 502). {@code 503}: falta la configuracion SMTP local
+	 * ({@code SMTP_HOST}/{@code SMTP_FROM}); no es una falla del servidor remoto. Generico, sin detalle interno.
+	 */
+	@ExceptionHandler(EmailNoConfiguradoException.class)
+	ResponseEntity<ProblemDetail> emailNoConfigurado(EmailNoConfiguradoException ex) {
+		return of(problem(HttpStatus.SERVICE_UNAVAILABLE, "Envío de email no disponible",
+				"El envío de emails no está disponible en este momento."));
 	}
 
 	@ExceptionHandler(Exception.class)

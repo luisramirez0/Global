@@ -1,6 +1,6 @@
 /** Utilidades de test para la página de ficha clínica (C-12b; solo se importan desde *.test.ts). */
 import { CONSENTIMIENTO_V1, FICHA_V3, NOTA_1, NOTA_2, TEXTO_V1 } from '../api/__fixtures__/ficha';
-import { PACIENTE_ANA, pagina } from '../api/__fixtures__/pacientes';
+import { PACIENTE_ANA, pagina } from '../api/__fixtures__/pacientesAbm';
 import type { Consentimiento, Ficha, Nota, Paciente, Pagina, Rol, TextoConsentimiento } from '../api/types';
 import { renderFicha } from '../pages/ficha/ficha';
 import type { Page } from '../router/router';

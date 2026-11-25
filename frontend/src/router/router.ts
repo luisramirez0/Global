@@ -35,6 +35,11 @@ export interface RouterConfig<C> {
   appName: string;
   homePath: string;
   loginPath: string;
+  /**
+   * Redirecciones explícitas `ruta anterior → ruta nueva` (p. ej. marcadores viejos). Se aplican primero y de a un
+   * solo salto (el destino no se vuelve a redirigir), antes del guard; como cualquier otra, reemplazan el historial.
+   */
+  redirects?: ReadonlyMap<string, string>;
 }
 
 export interface Router {
@@ -134,7 +139,9 @@ export function createRouter<C>(config: RouterConfig<C>): Router {
     return found;
   }
 
-  function target(requested: string): string {
+  function target(solicitada: string): string {
+    // Redirecciones explícitas primero (C-13), después la resolución con parámetros (C-12, D1).
+    const requested = config.redirects?.get(solicitada) ?? solicitada;
     const candidate = match(requested) === null ? config.homePath : requested;
     const { route } = find(candidate);
     const authenticated = config.isAuthenticated();

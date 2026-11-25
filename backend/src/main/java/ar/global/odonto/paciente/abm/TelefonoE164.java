@@ -14,13 +14,18 @@ public final class TelefonoE164 {
 	private TelefonoE164() {
 	}
 
+	/** Indica si el valor ya esta en E.164 estricto ({@code +} y 8 a 15 digitos, sin separadores). */
+	public static boolean esValido(String telefono) {
+		return telefono != null && VALIDO.matcher(telefono).matches();
+	}
+
 	/** Devuelve el telefono en E.164, o {@code null} si viene vacio. */
 	public static String normalizar(String raw) {
 		if (raw == null || raw.isBlank()) {
 			return null;
 		}
 		String telefono = SEPARADORES.matcher(raw).replaceAll("");
-		if (!VALIDO.matcher(telefono).matches()) {
+		if (!esValido(telefono)) {
 			throw new DatoInvalidoException("telefono");
 		}
 		return telefono;

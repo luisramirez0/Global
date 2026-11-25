@@ -68,13 +68,13 @@ describe('validación', () => {
 });
 
 describe('envío', () => {
-  it('éxito: inicia sesión, carga el perfil y navega a inicio', async () => {
+  it('éxito: inicia sesión, carga el perfil y navega a la agenda', async () => {
     const { root, ctx } = setup();
     ctx.api.login.mockResolvedValue(LOGIN_OK);
     ctx.api.me.mockResolvedValue(ME_OK);
     fill(root, { email: ` ${EMAIL} `, password: PASSWORD });
     submit(root);
-    await vi.waitFor(() => expect(ctx.navigate).toHaveBeenCalledWith('/inicio'));
+    await vi.waitFor(() => expect(ctx.navigate).toHaveBeenCalledWith('/agenda'));
     expect(ctx.api.login).toHaveBeenCalledWith({ email: EMAIL, password: PASSWORD });
     expect(ctx.session.getToken()).toBe(LOGIN_OK.accessToken);
     expect(ctx.session.profile()).toEqual(ME_OK);

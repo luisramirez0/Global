@@ -215,3 +215,29 @@ C-12b:
   - El 409 conserva lo escrito.
   - `dispose` limpia.
 - Ningún dato clínico en almacenamiento, consola, URL ni título.
+
+## Integración con `main` (merge de `origin/main`, 2026-11-25)
+
+`main` trajo C-13 (agenda), C-15 (auditoría y export), C-09 y C-14 (recordatorios), que tocaron los mismos archivos compartidos. Qué cambió al resolver los conflictos, sin cambiar el comportamiento de C-12:
+
+- **Inicio**: con C-13, `HOME_PATH` es `#/agenda` y `#/inicio` es una redirección explícita.
+  - Donde este documento dice que un id inválido va a `#/inicio`, ahora va a `#/agenda`.
+  - La regla de A-D1 se mantiene: es ruta desconocida y la página de pacientes o ficha no hace requests.
+  - Los tests de app verifican que no hay requests a `/api/pacientes` ni a `/api/consentimientos`, porque la agenda hace las suyas al abrirse.
+  - La spec delta de `frontend-shell` se rebasó sobre el requisito actual de `main`.
+- **Router**: se combinan las `redirects` de C-13 (primero) con la resolución por parámetros de C-12.
+- **`api/pacientes.ts`**: C-13 creó un cliente mínimo (`buscar`, `obtener`) y pidió extenderlo, no duplicarlo. C-12 lo extiende en el mismo módulo e interfaz con `crear`, `editar`, `darDeBaja` y `reactivar`.
+  - `FiltroPacientes` queda con los campos opcionales de C-13.
+  - `buscar` valida la paginación solo cuando viene y no envía un `q` vacío o de espacios.
+- **`createTextAreaField`**: las dos ramas lo crearon. Queda una sola versión, con `maxLength` opcional.
+  - Sin él, el área se comporta como en C-13/C-14: sin atributo ni aviso.
+  - Con él, se comporta como en C-12 (D9, A-D5b).
+- **`ApiError`**: suma los campos de las dos ramas (`codigo` y `pacienteId` de C-12; `conflicto` y `bloqueoId` de C-13).
+- **Decodificadores**: se toman los de `main` y se endurecen dos validaciones compartidas que usaban los tests de C-12.
+  - `fechaNacimiento` debe existir en el calendario.
+  - `tamanio` de página ≥ 1.
+
+  Ningún test de `main` dependía de lo contrario, y el backend nunca devuelve esos casos.
+- **Fixtures**: `__fixtures__/pacientes.ts` queda como en `main`, porque los tests de C-13 dependen de su Ana con id 5. Las fixtures de C-12 pasan a `__fixtures__/pacientesAbm.ts` con los mismos valores; en los tests de C-12 solo cambió la ruta del import.
+- **Menú**: Agenda, Recordatorios, **Pacientes**, Configuración, Auditoría.
+  - Los tests de `main` que comparan la lista exacta del menú, de rutas y de métodos del mock de pacientes sumaron solo lo de C-12, el mismo criterio que usó C-14.

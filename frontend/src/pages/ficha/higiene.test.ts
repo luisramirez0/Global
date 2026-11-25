@@ -1,7 +1,7 @@
 /** Higiene de datos clínicos en el navegador (C-12b, tasks 5.8; design D8). */
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { CONSENTIMIENTO_V1, FICHA_V3, NOTA_1, TEXTO_V1 } from '../../api/__fixtures__/ficha';
-import { PACIENTE_ANA, PACIENTE_INACTIVO, pagina } from '../../api/__fixtures__/pacientes';
+import { PACIENTE_ANA, PACIENTE_INACTIVO, pagina } from '../../api/__fixtures__/pacientesAbm';
 import { ApiError } from '../../api/errors';
 import type { Consentimiento, Ficha, Nota, Paciente, Pagina, TextoConsentimiento } from '../../api/types';
 import { SESSION_KEY } from '../../state/session';

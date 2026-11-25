@@ -1,21 +1,39 @@
 import { ApiError } from './errors';
+import { esInstanteIso } from './instante';
 import {
+  ACCIONES_AUDITORIA,
+  CANALES_RECORDATORIO,
+  ESTADOS_RECORDATORIO,
+  ESTADOS_TURNO,
   ROLES,
+  type AccionAuditoria,
   type Bloqueo,
+  type CanalRecordatorio,
   type Consentimiento,
   type DiaSemana,
+  type EnlaceWhatsApp,
+  type EstadoRecordatorio,
+  type EntradaAuditoria,
+  type EstadoTurno,
+  type ExportPaciente,
   type Ficha,
   type Horario,
-  type Nota,
-  type TextoConsentimiento,
   type LoginResponse,
   type MeResponse,
+  type Nota,
   type Paciente,
   type Pagina,
   type Prestacion,
+  type PersonaResumen,
+  type RecordatorioEmail,
   type RegistroResponse,
   type Rol,
   type Sillon,
+  type TextoConsentimiento,
+  type Turno,
+  type TurnoPendiente,
+  type UltimoRecordatorio,
+  type ValorDetalle,
 } from './types';
 
 /** Decodificadores de respuestas: narrowing de `unknown`, sin `as` sobre JSON crudo (regla 4). */
@@ -104,8 +122,8 @@ function hhmm(o: Obj, key: string): string {
 
 /** Instant de Java (ISO-8601 con zona): nunca una fecha local ambigua. */
 function instant(o: Obj, key: string): string {
-  const v = str(o, key);
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/.test(v) || Number.isNaN(Date.parse(v))) fail();
+  const v = o[key];
+  if (!esInstanteIso(v)) fail();
   return v;
 }
 
@@ -156,13 +174,40 @@ export function decodeBloqueo(value: unknown): Bloqueo {
   };
 }
 
-/* Pacientes (C-05; C-12). */
+/* Turnos (C-07). */
 
-/** `LocalDate` de Java (`YYYY-MM-DD`) que existe en el calendario. */
+function estadoTurno(o: Obj, key: string): EstadoTurno {
+  const found = ESTADOS_TURNO.find((e) => e === o[key]);
+  if (found === undefined) fail();
+  return found;
+}
+
+export function decodeTurno(value: unknown): Turno {
+  const o = obj(value);
+  const paciente = obj(o['paciente']);
+  const prestacion = obj(o['prestacion']);
+  return {
+    id: id(o, 'id'),
+    inicio: instant(o, 'inicio'),
+    fin: instant(o, 'fin'),
+    estado: estadoTurno(o, 'estado'),
+    sobreturno: bool(o, 'sobreturno'),
+    motivoCancelacion: strOrNull(o, 'motivoCancelacion'),
+    notas: strOrNull(o, 'notas'),
+    sillonId: id(o, 'sillonId'),
+    profesionalId: idOrNull(o, 'profesionalId'),
+    paciente: { id: id(paciente, 'id'), nombre: str(paciente, 'nombre'), apellido: str(paciente, 'apellido') },
+    prestacion: { id: id(prestacion, 'id'), nombre: str(prestacion, 'nombre') },
+  };
+}
+
+/* Pacientes (C-05). */
+
+/** `LocalDate` de Java (`YYYY-MM-DD`) que además existe en el calendario (C-12: `1985-02-30` → `unexpected`). */
 function fechaOrNull(o: Obj, key: string): string | null {
-  const v = o[key];
-  if (v === null || v === undefined) return null;
-  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) fail();
+  const v = strOrNull(o, key);
+  if (v === null) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) fail();
   const [y, m, d] = v.split('-').map(Number);
   if (y === undefined || m === undefined || d === undefined) fail();
   const date = new Date(Date.UTC(y, m - 1, d));
@@ -170,9 +215,17 @@ function fechaOrNull(o: Obj, key: string): string | null {
   return v;
 }
 
-function entero(o: Obj, key: string, min: number): number {
+/** Entero seguro y no negativo (paginación, conteos). */
+function nonNegativeInt(o: Obj, key: string): number {
   const v = o[key];
-  if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < min) fail();
+  if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < 0) fail();
+  return v;
+}
+
+/** Entero seguro y positivo (tamaño de página). */
+function positiveInt(o: Obj, key: string): number {
+  const v = nonNegativeInt(o, key);
+  if (v < 1) fail();
   return v;
 }
 
@@ -193,19 +246,123 @@ export function decodePaciente(value: unknown): Paciente {
   };
 }
 
-/** `Pagina<T>` del backend; cada elemento pasa por `decode`. */
+/* Auditoría (C-06) y export (C-15). */
+
+function accionAuditoria(o: Obj, key: string): AccionAuditoria {
+  const v = o[key];
+  const found = ACCIONES_AUDITORIA.find((a) => a === v);
+  if (found === undefined) fail();
+  return found;
+}
+
+/** Objeto JSON plano con valores escalares, o `null`. */
+function detalle(o: Obj, key: string): Readonly<Record<string, ValorDetalle>> | null {
+  const v = o[key];
+  if (v === null || v === undefined) return null;
+  const d = obj(v);
+  const result: Record<string, ValorDetalle> = {};
+  for (const [k, valor] of Object.entries(d)) {
+    if (typeof valor !== 'string' && typeof valor !== 'boolean' && (typeof valor !== 'number' || !Number.isFinite(valor))) fail();
+    result[k] = valor;
+  }
+  return result;
+}
+
+export function decodeEntradaAuditoria(value: unknown): EntradaAuditoria {
+  const o = obj(value);
+  return {
+    id: id(o, 'id'),
+    fecha: instant(o, 'fecha'),
+    usuarioId: idOrNull(o, 'usuarioId'),
+    accion: accionAuditoria(o, 'accion'),
+    entidad: str(o, 'entidad', { nonEmpty: true }),
+    entidadId: idOrNull(o, 'entidadId'),
+    detalle: detalle(o, 'detalle'),
+    ip: strOrNull(o, 'ip'),
+  };
+}
+
+/** Página del backend (`common/web/Pagina`): `{contenido, pagina, tamanio, totalElementos, totalPaginas}`. */
 export function paginaOf<T>(decode: (value: unknown) => T): (value: unknown) => Pagina<T> {
   return (value) => {
     const o = obj(value);
-    const contenido = o['contenido'];
-    if (!Array.isArray(contenido)) fail();
     return {
-      contenido: contenido.map((item: unknown) => decode(item)),
-      pagina: entero(o, 'pagina', 0),
-      tamanio: entero(o, 'tamanio', 1),
-      totalElementos: entero(o, 'totalElementos', 0),
-      totalPaginas: entero(o, 'totalPaginas', 0),
+      contenido: listOf(decode)(o['contenido']),
+      pagina: nonNegativeInt(o, 'pagina'),
+      // El backend nunca responde una página de tamaño 0 (C-12: `tamanio: 0` → `unexpected`).
+      tamanio: positiveInt(o, 'tamanio'),
+      totalElementos: nonNegativeInt(o, 'totalElementos'),
+      totalPaginas: nonNegativeInt(o, 'totalPaginas'),
     };
+  };
+}
+
+/** Solo valida la forma mínima (objeto con `paciente`); el contenido se descarga sin interpretar. */
+export function decodeExportPaciente(value: unknown): ExportPaciente {
+  const o = obj(value);
+  obj(o['paciente']);
+  return o;
+}
+
+/* Recordatorios (C-09). */
+
+function estadoRecordatorio(o: Obj, key: string): EstadoRecordatorio {
+  const found = ESTADOS_RECORDATORIO.find((e) => e === o[key]);
+  if (found === undefined) fail();
+  return found;
+}
+
+function canalRecordatorio(o: Obj, key: string): CanalRecordatorio {
+  const found = CANALES_RECORDATORIO.find((c) => c === o[key]);
+  if (found === undefined) fail();
+  return found;
+}
+
+/** Solo `https://wa.me/...` (host exacto, sin credenciales ni puerto); cualquier otro destino es inesperado (C-14, D2). */
+function enlaceWa(o: Obj, key: string): string {
+  const v = str(o, key, { nonEmpty: true });
+  let url: URL;
+  try {
+    url = new URL(v);
+  } catch {
+    return fail();
+  }
+  if (url.protocol !== 'https:' || url.hostname !== 'wa.me' || url.username !== '' || url.password !== '' || url.port !== '') fail();
+  return v;
+}
+
+export function decodeEnlaceWhatsApp(value: unknown): EnlaceWhatsApp {
+  const o = obj(value);
+  return { recordatorioId: id(o, 'recordatorioId'), enlace: enlaceWa(o, 'enlace'), generadoEn: instant(o, 'generadoEn') };
+}
+
+export function decodeRecordatorioEmail(value: unknown): RecordatorioEmail {
+  const o = obj(value);
+  return { recordatorioId: id(o, 'recordatorioId'), estado: estadoRecordatorio(o, 'estado'), enviadoEn: instant(o, 'enviadoEn') };
+}
+
+function decodeUltimoRecordatorio(value: unknown): UltimoRecordatorio {
+  const o = obj(value);
+  return { canal: canalRecordatorio(o, 'canal'), estado: estadoRecordatorio(o, 'estado'), generadoEn: instant(o, 'generadoEn') };
+}
+
+function persona(o: Obj, key: string): PersonaResumen {
+  const p = obj(o[key]);
+  return { id: id(p, 'id'), nombre: str(p, 'nombre'), apellido: str(p, 'apellido') };
+}
+
+export function decodeTurnoPendiente(value: unknown): TurnoPendiente {
+  const o = obj(value);
+  return {
+    turnoId: id(o, 'turnoId'),
+    inicio: instant(o, 'inicio'),
+    fin: instant(o, 'fin'),
+    estado: estadoTurno(o, 'estado'),
+    paciente: persona(o, 'paciente'),
+    profesional: persona(o, 'profesional'),
+    tieneTelefono: bool(o, 'tieneTelefono'),
+    tieneEmail: bool(o, 'tieneEmail'),
+    ultimoRecordatorio: o['ultimoRecordatorio'] === null || o['ultimoRecordatorio'] === undefined ? null : decodeUltimoRecordatorio(o['ultimoRecordatorio']),
   };
 }
 
@@ -221,7 +378,7 @@ function instantOrNull(o: Obj, key: string): string | null {
 
 /** `@Version` de JPA: entero ≥ 0, o `null` si la ficha no fue cargada. */
 function versionOrNull(o: Obj, key: string): number | null {
-  return o[key] === null || o[key] === undefined ? null : entero(o, key, 0);
+  return o[key] === null || o[key] === undefined ? null : nonNegativeInt(o, key);
 }
 
 export function decodeConsentimiento(value: unknown): Consentimiento {

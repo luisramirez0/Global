@@ -129,13 +129,16 @@ export interface TextAreaFieldOptions {
   id: string;
   name: string;
   label: string;
-  /** Obligatorio: los textos clínicos tienen límite en el backend (C-08, D11). */
-  maxLength: number;
+  /**
+   * Largo máximo (C-12: textos clínicos con límite en el backend). Sin él, el área no tiene límite en el cliente (uso de
+   * C-13/C-14: notas y motivos del turno, que validan aparte).
+   */
+  maxLength?: number;
   required?: boolean;
   rows?: number;
   /**
    * C-12b (A-D5b): sin atributo `maxlength`, porque el navegador cortaría en silencio un texto pegado. En su lugar,
-   * al pasarse del máximo se muestra un error con la cuenta y el texto se conserva completo.
+   * al pasarse del máximo se muestra un error con la cuenta y el texto se conserva completo. Requiere `maxLength`.
    */
   avisarExceso?: boolean;
 }
@@ -152,20 +155,25 @@ export interface TextAreaField extends FormControl {
   setValue(value: string): void;
 }
 
-/** Área de texto accesible (C-12, D9): mismo esquema de label y error que `createField`. */
+/**
+ * Texto de varias líneas con el mismo patrón accesible que `createField`. C-13/C-14 lo usan sin opciones extra (notas y
+ * motivos del turno); C-12 suma `maxLength`, `required`, `rows` y `avisarExceso` (D9, A-D5b).
+ */
 export function createTextAreaField(options: TextAreaFieldOptions): TextAreaField {
-  const avisar = options.avisarExceso ?? false;
-  const attrs: Record<string, string | boolean> = { name: options.name, required: options.required ?? false };
-  if (!avisar) attrs['maxlength'] = String(options.maxLength);
+  const max = options.maxLength;
+  const avisar = (options.avisarExceso ?? false) && max !== undefined;
+  const attrs: Record<string, string | boolean> = { name: options.name };
+  if (options.required === true) attrs['required'] = true;
+  if (max !== undefined && !avisar) attrs['maxlength'] = String(max);
   const textarea = h('textarea', { id: options.id, attrs });
   if (options.rows !== undefined) textarea.rows = options.rows;
   const error = h('p', { id: `${options.id}-error`, className: 'error-campo' });
   if (avisar) {
     let excedido = false;
     textarea.addEventListener('input', () => {
-      if (textarea.value.length > options.maxLength) {
+      if (textarea.value.length > max) {
         excedido = true;
-        markError(textarea, error, mensajeExceso(options.maxLength, textarea.value.length));
+        markError(textarea, error, mensajeExceso(max, textarea.value.length));
       } else if (excedido) {
         excedido = false;
         markError(textarea, error, null);

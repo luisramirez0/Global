@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PACIENTE_ANA, PACIENTE_INACTIVO } from '../../api/__fixtures__/pacientes';
+import { PACIENTE_ANA, PACIENTE_INACTIVO } from '../../api/__fixtures__/pacientesAbm';
 import { ApiError } from '../../api/errors';
 import type { Paciente, Rol } from '../../api/types';
 import type { Page } from '../../router/router';

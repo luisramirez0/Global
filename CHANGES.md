@@ -271,7 +271,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/10_preguntas_abiertas.md` §PA-07, §PA-08
 
 ### [C-09] `recordatorios-whatsapp-email`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (verificación técnica en H2, 2026-11-25; pendiente la verificación manual contra MySQL 8.4 por la persona, PR y archivo del change). Evidencia: backend 953/953 con `./gradlew test` en dos corridas iguales, 955/955 tras la review de STARTTLS (línea base 811; 142 tests nuevos: enlace `wa.me` y E.164, plantilla sin datos clínicos, WhatsApp y email con auditoría fail-closed, SMTP caído (`502`) y sin configurar (`503`) con fake del puerto, pendientes, RBAC, aislamiento A/B, test de arquitectura `@Audited`/`readOnly`, logs sin PII y turno desaparecido); sin migraciones; dependencia nueva `spring-boot-starter-mail`. **Pendiente**: review de integrante-1/2 (regla 12; `ApiExceptionHandler` y `TelefonoE164` fuera de `recordatorio/`). Handoff: `knowledge-base/entrega/C-09.md`
 - **Resultado**: el endpoint devuelve un enlace `wa.me` válido y registra Recordatorio `GENERADO`; el email se envía por SMTP con manejo de error.
 - **Scope**:
   - `GET /api/turnos/{id}/recordatorio/whatsapp` → `https://wa.me/<E164>?text=<mensaje codificado>`; paciente sin teléfono → error controlado (RN-CO-03).
@@ -341,7 +341,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/07_flujos_principales.md` §Flujo 5
 
 ### [C-13] `frontend-agenda`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[ ]` implementado, mergeado en PR #20 (merge `ea88864`) y archivado en `openspec/changes/archive/2026-11-25-c-13-frontend-agenda` (specs sincronizadas: nueva `frontend-agenda`; modificadas `frontend-api-client` y `frontend-shell`); **pendiente de verificación manual (task 8.5)** — evidencia técnica: `npm test` 1212/1212 en 57 archivos (línea base 393), lint/typecheck limpios, `openspec validate --strict` OK, sin cambios en `backend/` ni dependencias. Handoff: `knowledge-base/entrega/C-13.md`
 - **Resultado**: vista diaria/semanal por sillón con colores por estado; crear, mover, cancelar y confirmar turnos con feedback de conflictos.
 - **Scope**:
   - `src/pages/agenda/` (grilla diaria/semanal, filtro por sillón, color por estado), modal de turno (paciente, prestación, sillón, horario), manejo de 409/422, sobreturno explícito con confirmación.
@@ -357,7 +357,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/05_reglas_de_negocio.md` §RN-AG
 
 ### [C-14] `frontend-recordatorios`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` implementado y verificado con tests (2026-11-25), mergeado en PR #25 (merge `bff9fbf`) y archivado en `openspec/changes/archive/2026-11-25-c-14-frontend-recordatorios` (specs sincronizadas: nueva `frontend-reminders`; modificadas `frontend-agenda` y `frontend-shell`). **Pendiente**: verificación manual contra el backend real; review de integrante-1/2. Evidencia: frontend 1494/1494 en 67 archivos (línea base 61 archivos / 1288 tests; +206 tests, strict TDD); lint y typecheck limpios; `openspec validate c-14-frontend-recordatorios --strict` válido; `git diff main -- backend` vacío; sin dependencias nuevas. Cliente tipado de C-09 con `cache: 'no-store'` y enlace `wa.me` validado; página `#/recordatorios` (mañana en la zona del consultorio, confirmar/cancelar); acciones compartidas con el diálogo de la agenda; email exitoso o sin confirmar queda deshabilitado en memoria. Se actualizaron solo 5 expectativas de `pages/agenda/accionesTurno.test.ts` (botones del diálogo y orden de Tab). Handoff: `knowledge-base/entrega/C-14.md`
 - **Resultado**: botón "Recordar por WhatsApp" abre `wa.me`; opción de email; lista de turnos de mañana sin recordatorio.
 - **Scope**:
   - `src/pages/recordatorios/` y botones en el turno: abre el enlace `wa.me` en pestaña nueva, deshabilitado y con aviso si no hay teléfono; envío de email con estado/errores.
@@ -376,7 +376,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
 ## FASE 4 — Cumplimiento y entrega
 
 ### [C-15] `auditoria-export-ui`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (verificación técnica en H2 y manual contra MySQL 8.4 + UI, 2026-11-25), mergeado en PR #19 (merge `7abd7e3`) y archivado en `openspec/changes/archive/2026-11-25-c-15-auditoria-export-ui` (specs sincronizadas: nuevas `patient-data-export` y `frontend-audit-log`; modificadas `audit-log` y `frontend-shell`). Manual: export del paciente de prueba por API y UI con archivo descargado; RECEPCION sin ítem "Auditoría" y con mensaje de sin permiso. **Pendiente**: review de integrante-1/2 (regla 12). Evidencia: backend 811/811 con `./gradlew test` (línea base 785; 26 tests nuevos: consultas con `join fetch` y aislamiento A/B, paquete completo y orden, encabezados de descarga, `EXPORT` con detalle de conteos, paciente vacío y dado de baja, 404 propio y entre tenants sin auditoría, RECEPCION 403, sin token 401, fail-closed sin mocks, logs sin PII, caracterización de `entidadId`, arquitectura "nada `readOnly`" y transacción programática no `readOnly`; 6 mutaciones detectadas). Frontend 469/469 en 29 archivos (línea base 393; 76 tests nuevos; 9 mutaciones detectadas); lint, typecheck y build limpios. Sin migraciones ni dependencias nuevas; `agenda/` y `auditoria/` sin cambios. Corrige el contrato de C-08 (`entidadId` debe combinarse con `entidad`). Handoff: `knowledge-base/entrega/C-15.md`
 - **Resultado**: pantalla de log de accesos y exportación JSON de los datos de un paciente, registrando `EXPORT`.
 - **Scope**:
   - `GET /api/pacientes/{id}/export` (datos, ficha, turnos, notas; solo ADMIN/PROFESIONAL), `EXPORT` en AuditLog (US-040).

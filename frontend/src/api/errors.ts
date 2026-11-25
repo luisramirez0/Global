@@ -1,4 +1,6 @@
 /** Errores tipados de la API (design D1). El mensaje es fijo por tipo: nunca el detail del servidor ni datos del cliente. */
+import { esInstanteIso } from './instante';
+import type { ConflictoTurno } from './types';
 
 export type ApiErrorKind =
   | 'validation'
@@ -35,6 +37,10 @@ export interface ApiErrorDetails {
   retryAfterSeconds?: number | null;
   codigo?: string | null;
   pacienteId?: number | null;
+  /** Detalle de un 409 de turno (C-13, D2). */
+  conflicto?: ConflictoTurno | null;
+  /** Id del bloqueo de un 422 de turno (C-13, D2). */
+  bloqueoId?: number | null;
 }
 
 export class ApiError extends Error {
@@ -51,6 +57,10 @@ export class ApiError extends Error {
   readonly codigo: string | null;
   /** Paciente existente informado por el 409 de DNI duplicado (C-05); `null` en cualquier otro caso. */
   readonly pacienteId: number | null;
+  /** Solo ids e instantes del turno que choca; `null` si el 409 no lo trae o viene mal formado. */
+  readonly conflicto: ConflictoTurno | null;
+  /** Bloqueo que causó un 422; `null` si no viene o es inválido. */
+  readonly bloqueoId: number | null;
 
   constructor(kind: ApiErrorKind, details: ApiErrorDetails = {}) {
     super(MESSAGES[kind]);
@@ -62,6 +72,8 @@ export class ApiError extends Error {
     this.retryAfterSeconds = details.retryAfterSeconds ?? null;
     this.codigo = details.codigo ?? null;
     this.pacienteId = details.pacienteId ?? null;
+    this.conflicto = details.conflicto ?? null;
+    this.bloqueoId = details.bloqueoId ?? null;
   }
 }
 
@@ -90,6 +102,26 @@ function parseFieldErrors(body: unknown): FieldError[] {
     }
   }
   return result;
+}
+
+function entero(value: unknown): number | null {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+/** Decodificador tolerante: cualquier desvío da `null` sin afectar el `kind` (C-13, D2). */
+function parseConflicto(body: unknown): ConflictoTurno | null {
+  if (!isRecord(body) || !isRecord(body['conflicto'])) return null;
+  const c = body['conflicto'];
+  const turnoId = entero(c['turnoId']);
+  const sillonId = entero(c['sillonId']);
+  const profesionalId = entero(c['profesionalId']);
+  const motivo = c['motivo'];
+  const inicio = c['inicio'];
+  const fin = c['fin'];
+  if (turnoId === null || sillonId === null || profesionalId === null) return null;
+  if (motivo !== 'SILLON' && motivo !== 'PROFESIONAL') return null;
+  if (!esInstanteIso(inicio) || !esInstanteIso(fin)) return null;
+  return { turnoId, inicio, fin, sillonId, profesionalId, motivo };
 }
 
 function parseRetryAfter(headers: Headers): number | null {
@@ -125,5 +157,7 @@ export function toApiError(status: number, headers: Headers, body: unknown): Api
     retryAfterSeconds: kind === 'rate_limited' ? parseRetryAfter(headers) : null,
     codigo: parseCodigo(body),
     pacienteId: parsePacienteId(status, body),
+    conflicto: status === 409 ? parseConflicto(body) : null,
+    bloqueoId: status === 422 && isRecord(body) ? entero(body['bloqueoId']) : null,
   });
 }

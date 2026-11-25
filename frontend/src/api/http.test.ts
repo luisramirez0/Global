@@ -241,3 +241,26 @@ describe('401', () => {
     expect(onUnauthorized).not.toHaveBeenCalled();
   });
 });
+
+describe('opción cache (C-14)', () => {
+  it('con cache "no-store" el RequestInit la incluye', async () => {
+    const { client, fetchFn } = setup();
+    fetchFn.mockResolvedValue(jsonResponse(200, {}));
+    await client.request('GET', '/x', { decode: decodeAny, cache: 'no-store' });
+    expect(lastInit(fetchFn).cache).toBe('no-store');
+  });
+
+  it('con otro valor (reload) también se copia', async () => {
+    const { client, fetchFn } = setup();
+    fetchFn.mockResolvedValue(jsonResponse(200, {}));
+    await client.request('POST', '/x', { decode: decodeAny, cache: 'reload' });
+    expect(lastInit(fetchFn).cache).toBe('reload');
+  });
+
+  it('sin la opción el RequestInit no tiene la clave cache', async () => {
+    const { client, fetchFn } = setup();
+    fetchFn.mockResolvedValue(jsonResponse(200, {}));
+    await client.request('GET', '/x', { decode: decodeAny });
+    expect(Object.keys(lastInit(fetchFn))).not.toContain('cache');
+  });
+});

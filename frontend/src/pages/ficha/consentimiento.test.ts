@@ -1,7 +1,7 @@
 /** Consentimiento previo y bloqueo visual de la ficha (C-12b, tasks 5.3; design D4; RN-DS-03). */
 import { afterEach, describe, expect, it } from 'vitest';
 import { CONSENTIMIENTO_V1, FICHA_V3, TEXTO_V1 } from '../../api/__fixtures__/ficha';
-import { PACIENTE_ANA } from '../../api/__fixtures__/pacientes';
+import { PACIENTE_ANA } from '../../api/__fixtures__/pacientesAbm';
 import { ApiError } from '../../api/errors';
 import type { Consentimiento } from '../../api/types';
 import { casilla, contextoFicha, enviar, montarFicha, seccion, type Montada } from '../../test-support/ficha';

@@ -1,21 +1,32 @@
 /** Utilidades de test para páginas (solo se importan desde *.test.ts). */
 import { vi, type Mock } from 'vitest';
 import type { AgendaConfigApi } from '../api/agendaConfig';
+import type { AuditoriaApi } from '../api/auditoria';
 import type { AuthApi } from '../api/auth';
 import type { FichaApi } from '../api/ficha';
 import type { PacientesApi } from '../api/pacientes';
+import type { RecordatoriosApi } from '../api/recordatorios';
+import type { TurnosApi } from '../api/turnos';
 import type { MeResponse, Rol } from '../api/types';
 import { createFlash, type PageContext } from '../pages/context';
+import { crearRegistroEnviosSinConfirmar } from '../pages/recordatorios/dominio/enviosSinConfirmar';
 import { createSession } from '../state/session';
 
 /** Cada método de la API de agenda como `vi.fn` tipado (C-11). */
 export type AgendaMock = { [K in keyof AgendaConfigApi]: Mock<AgendaConfigApi[K]> };
 
-/** Cada método de la API de pacientes como `vi.fn` tipado (C-12). */
+/** Cada método de turnos y pacientes como `vi.fn` tipado (C-13; C-12 suma el ABM de pacientes). */
+export type TurnosMock = { [K in keyof TurnosApi]: Mock<TurnosApi[K]> };
 export type PacientesMock = { [K in keyof PacientesApi]: Mock<PacientesApi[K]> };
 
 /** Cada método de la API de historia clínica como `vi.fn` tipado (C-12b). */
 export type FichaMock = { [K in keyof FichaApi]: Mock<FichaApi[K]> };
+
+/** Cliente de auditoría y export como `vi.fn` tipado (C-15). */
+export type AuditoriaMock = { [K in keyof AuditoriaApi]: Mock<AuditoriaApi[K]> };
+
+/** Cliente de recordatorios como `vi.fn` tipado (C-14). */
+export type RecordatoriosMock = { [K in keyof RecordatoriosApi]: Mock<RecordatoriosApi[K]> };
 
 export interface TestContext extends PageContext {
   api: {
@@ -24,8 +35,11 @@ export interface TestContext extends PageContext {
     me: ReturnType<typeof vi.fn<AuthApi['me']>>;
   };
   agenda: AgendaMock;
+  turnos: TurnosMock;
   pacientes: PacientesMock;
   ficha: FichaMock;
+  auditoria: AuditoriaMock;
+  recordatorios: RecordatoriosMock;
   navigate: ReturnType<typeof vi.fn<(path: string) => void>>;
 }
 
@@ -47,6 +61,16 @@ function createAgendaMock(): AgendaMock {
     crearBloqueo: vi.fn<AgendaConfigApi['crearBloqueo']>(),
     editarBloqueo: vi.fn<AgendaConfigApi['editarBloqueo']>(),
     borrarBloqueo: vi.fn<AgendaConfigApi['borrarBloqueo']>(),
+  };
+}
+
+function createTurnosMock(): TurnosMock {
+  return {
+    listar: vi.fn<TurnosApi['listar']>(),
+    obtener: vi.fn<TurnosApi['obtener']>(),
+    crear: vi.fn<TurnosApi['crear']>(),
+    cambiarEstado: vi.fn<TurnosApi['cambiarEstado']>(),
+    reprogramar: vi.fn<TurnosApi['reprogramar']>(),
   };
 }
 
@@ -77,8 +101,16 @@ export function createTestContext(): TestContext {
   return {
     api: { register: vi.fn<AuthApi['register']>(), login: vi.fn<AuthApi['login']>(), me: vi.fn<AuthApi['me']>() },
     agenda: createAgendaMock(),
+    turnos: createTurnosMock(),
     pacientes: createPacientesMock(),
     ficha: createFichaMock(),
+    auditoria: { listar: vi.fn<AuditoriaApi['listar']>(), exportarPaciente: vi.fn<AuditoriaApi['exportarPaciente']>() },
+    recordatorios: {
+      enlaceWhatsApp: vi.fn<RecordatoriosApi['enlaceWhatsApp']>(),
+      enviarEmail: vi.fn<RecordatoriosApi['enviarEmail']>(),
+      pendientes: vi.fn<RecordatoriosApi['pendientes']>(),
+    },
+    enviosSinConfirmar: crearRegistroEnviosSinConfirmar(),
     session: createSession({ storage: sessionStorage, now: () => Date.now() }),
     navigate: vi.fn<(path: string) => void>(),
     flash: createFlash(),

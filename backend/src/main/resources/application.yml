@@ -23,9 +23,22 @@ spring:
     locations: classpath:db/migration
   mail:
     host: ${SMTP_HOST:}
-    port: ${SMTP_PORT:}
+    port: ${SMTP_PORT:587}
     username: ${SMTP_USER:}
     password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          # Timeouts explicitos (ms): sin ellos un SMTP caido bloquea el hilo indefinidamente (C-09, D8).
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+          # Autenticacion y STARTTLS obligatorio: la contrasena SMTP nunca viaja en texto plano (C-09, regla 12).
+          # Solo un SMTP local de desarrollo sin TLS justifica SMTP_STARTTLS=false.
+          auth: true
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
+            required: ${SMTP_STARTTLS:true}
 
 logging:
   level:
@@ -36,6 +49,9 @@ server:
   port: 8080
 
 app:
+  mail:
+    # Remitente de los emails de recordatorio. Sin valor: el envio responde SMTP_NO_CONFIGURADO (C-09, D8).
+    from: ${SMTP_FROM:}
   base-url: ${APP_BASE_URL:http://localhost:5173}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

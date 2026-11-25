@@ -1,6 +1,6 @@
 /** Notas clínicas inmutables (C-12b, tasks 5.5; design D7, PA-08). */
 import { afterEach, describe, expect, it } from 'vitest';
-import { pagina } from '../../api/__fixtures__/pacientes';
+import { pagina } from '../../api/__fixtures__/pacientesAbm';
 import { ApiError } from '../../api/errors';
 import type { Nota } from '../../api/types';
 import { contextoFicha, enviar, montarFicha, seccion, textarea, type Montada } from '../../test-support/ficha';

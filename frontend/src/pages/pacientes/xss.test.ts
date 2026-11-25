@@ -3,7 +3,7 @@
  * muestra como texto literal: nunca se crean nodos a partir de él.
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { PACIENTE_ANA, pagina } from '../../api/__fixtures__/pacientes';
+import { PACIENTE_ANA, pagina } from '../../api/__fixtures__/pacientesAbm';
 import { ApiError } from '../../api/errors';
 import type { Paciente } from '../../api/types';
 import type { Page } from '../../router/router';

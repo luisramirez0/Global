@@ -1,7 +1,7 @@
 /** Paciente dado de baja: historia clínica en solo lectura (C-12b, tasks 5.6; design D6). */
 import { afterEach, describe, expect, it } from 'vitest';
 import { FICHA_V3, NOTA_1, NOTA_2 } from '../../api/__fixtures__/ficha';
-import { PACIENTE_ANA, PACIENTE_INACTIVO, pagina } from '../../api/__fixtures__/pacientes';
+import { PACIENTE_ANA, PACIENTE_INACTIVO, pagina } from '../../api/__fixtures__/pacientesAbm';
 import { ApiError } from '../../api/errors';
 import { contextoFicha, enviar, montarFicha, seccion, textarea, type Montada } from '../../test-support/ficha';
 import { buttons, flush } from '../../test-support/pages';

@@ -107,18 +107,73 @@ export interface FiltroBloqueos {
   hasta?: string;
 }
 
-/* Pacientes (C-05; C-12). */
+/** Contrato de turnos de C-07 (knowledge-base/entrega/C-07.md, spec appointment-scheduling). */
 
-/** Página de resultados de la API (`common.web.Pagina` del backend). */
-export interface Pagina<T> {
-  contenido: T[];
-  pagina: number;
-  tamanio: number;
-  totalElementos: number;
-  totalPaginas: number;
+export const ESTADOS_TURNO = ['PROGRAMADO', 'CONFIRMADO', 'CANCELADO', 'ASISTIO', 'AUSENTE'] as const;
+export type EstadoTurno = (typeof ESTADOS_TURNO)[number];
+
+export interface Turno {
+  id: number;
+  /** Instantes ISO-8601 UTC. */
+  inicio: string;
+  fin: string;
+  estado: EstadoTurno;
+  sobreturno: boolean;
+  motivoCancelacion: string | null;
+  notas: string | null;
+  sillonId: number;
+  profesionalId: number | null;
+  paciente: { id: number; nombre: string; apellido: string };
+  prestacion: { id: number; nombre: string };
 }
 
-/** Paciente tal como lo devuelve la API: DNI sin separadores y teléfono en E.164 o `null`. */
+export interface TurnoCreateRequest {
+  pacienteId: number;
+  prestacionId: number;
+  sillonId: number;
+  /** Omitido: el backend usa el único profesional activo. */
+  profesionalId?: number;
+  inicio: string;
+  /** Omitido = falso. */
+  sobreturno?: boolean;
+  notas?: string;
+}
+
+export interface TurnoEstadoRequest {
+  estado: EstadoTurno;
+  /** Solo con `CANCELADO`. */
+  motivoCancelacion?: string;
+}
+
+export interface TurnoReprogramarRequest {
+  inicio: string;
+  /** Omitido: se conserva el sillón. */
+  sillonId?: number;
+  profesionalId?: number;
+  sobreturno?: boolean;
+}
+
+export interface FiltroTurnos {
+  /** Rango `[desde, hasta)` en instantes UTC, máximo 42 días. */
+  desde: string;
+  hasta: string;
+  sillonId?: number;
+  profesionalId?: number;
+  incluirCancelados?: boolean;
+}
+
+/** Detalle de un 409 de turno: solo ids e instantes, nunca datos del otro paciente. */
+export interface ConflictoTurno {
+  turnoId: number;
+  inicio: string;
+  fin: string;
+  sillonId: number;
+  profesionalId: number;
+  motivo: 'SILLON' | 'PROFESIONAL';
+}
+
+/** Contrato de pacientes de C-05 (knowledge-base/entrega/C-05.md). */
+
 export interface Paciente {
   id: number;
   nombre: string;
@@ -133,6 +188,106 @@ export interface Paciente {
   obraSocialTexto: string | null;
   activo: boolean;
 }
+
+/** Contrato de `GET /api/auditoria` (knowledge-base/entrega/C-06.md) y del export de C-15. */
+
+export const ACCIONES_AUDITORIA = ['READ', 'CREATE', 'UPDATE', 'DELETE', 'EXPORT', 'LOGIN'] as const;
+export type AccionAuditoria = (typeof ACCIONES_AUDITORIA)[number];
+
+/** Valores del detalle: el backend solo admite números, booleanos y códigos (sin PII). */
+export type ValorDetalle = string | number | boolean;
+
+export interface EntradaAuditoria {
+  id: number;
+  /** Instant UTC ISO-8601. */
+  fecha: string;
+  usuarioId: number | null;
+  accion: AccionAuditoria;
+  entidad: string;
+  entidadId: number | null;
+  detalle: Readonly<Record<string, ValorDetalle>> | null;
+  ip: string | null;
+}
+
+export interface Pagina<T> {
+  contenido: T[];
+  pagina: number;
+  tamanio: number;
+  totalElementos: number;
+  totalPaginas: number;
+}
+
+export interface FiltroPacientes {
+  q?: string;
+  page?: number;
+  size?: number;
+  incluirInactivos?: boolean;
+}
+
+/**
+ * Filtros de la consulta. `desde` inclusivo y `hasta` exclusivo, como instantes UTC. `entidadId` solo junto con
+ * `entidad`: el backend no distingue entidades por id (design D8 de C-15).
+ */
+export interface FiltrosAuditoria {
+  desde?: string;
+  hasta?: string;
+  accion?: AccionAuditoria;
+  entidad?: string;
+  entidadId?: number;
+  usuarioId?: number;
+  page: number;
+}
+
+/** Paquete del export: se descarga tal cual, sin mostrarlo (design D11 de C-15). */
+export type ExportPaciente = Readonly<Record<string, unknown>>;
+
+/** Contrato de recordatorios de C-09 (knowledge-base/entrega/C-09.md, RecordatorioController). */
+
+export const CANALES_RECORDATORIO = ['WHATSAPP_LINK', 'EMAIL'] as const;
+export type CanalRecordatorio = (typeof CANALES_RECORDATORIO)[number];
+
+export const ESTADOS_RECORDATORIO = ['GENERADO', 'ENVIADO', 'ERROR'] as const;
+export type EstadoRecordatorio = (typeof ESTADOS_RECORDATORIO)[number];
+
+export interface EnlaceWhatsApp {
+  recordatorioId: number;
+  /** URL `https://wa.me/...`; contiene el teléfono: nunca se loguea ni se guarda. */
+  enlace: string;
+  generadoEn: string;
+}
+
+export interface RecordatorioEmail {
+  recordatorioId: number;
+  estado: EstadoRecordatorio;
+  enviadoEn: string;
+}
+
+export interface UltimoRecordatorio {
+  canal: CanalRecordatorio;
+  estado: EstadoRecordatorio;
+  generadoEn: string;
+}
+
+export interface PersonaResumen {
+  id: number;
+  nombre: string;
+  apellido: string;
+}
+
+export interface TurnoPendiente {
+  turnoId: number;
+  inicio: string;
+  fin: string;
+  estado: EstadoTurno;
+  paciente: PersonaResumen;
+  profesional: PersonaResumen;
+  tieneTelefono: boolean;
+  tieneEmail: boolean;
+  /** En pendientes solo puede ser `null` o tener estado `ERROR`. */
+  ultimoRecordatorio: UltimoRecordatorio | null;
+}
+
+/* Pacientes: alta y edición (C-12a). */
 
 /** Alta y edición (reemplazo completo de datos personales; no cambia `activo`). */
 export interface PacienteRequest {
@@ -195,14 +350,4 @@ export interface Nota {
   profesionalId: number;
   turnoId: number | null;
   texto: string;
-}
-
-export interface FiltroPacientes {
-  /** Nombre, apellido o prefijo de DNI; vacío = sin filtro. Nunca va en la URL de la app (D1). */
-  q: string;
-  incluirInactivos: boolean;
-  /** Página desde 0. */
-  page: number;
-  /** 1..50 (el backend ajusta; default 20). */
-  size: number;
 }

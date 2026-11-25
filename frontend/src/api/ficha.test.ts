@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { jsonResponse, problemResponse } from './__fixtures__/auth';
 import { CONSENTIMIENTO_V1, FICHA_V3, FICHA_VACIA, NOTA_1, NOTA_2, TEXTO_V1 } from './__fixtures__/ficha';
-import { pagina } from './__fixtures__/pacientes';
+import { pagina } from './__fixtures__/pacientesAbm';
 import { ApiError } from './errors';
 import { createFichaApi } from './ficha';
 import { createHttpClient } from './http';
