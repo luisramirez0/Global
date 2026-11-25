@@ -73,3 +73,92 @@ describe('ApiError sin respuesta', () => {
     expect(err.message.length).toBeGreaterThan(0);
   });
 });
+
+describe('codigo de negocio (C-12, D3)', () => {
+  it.each([
+    [409, 'FICHA_DESACTUALIZADA', 'conflict'],
+    [409, 'CONSENTIMIENTO_REQUERIDO', 'conflict'],
+    [409, 'PACIENTE_INACTIVO', 'conflict'],
+    [422, 'PROFESIONAL_NO_VINCULADO', 'validation'],
+  ] as const)('toma codigo de un %i (%s) sin cambiar el kind', (status, codigo, kind) => {
+    const err = toApiError(status, noHeaders, { title: 'x', codigo });
+    expect(err.codigo).toBe(codigo);
+    expect(err.kind).toBe(kind);
+    expect(err.message).toBe(toApiError(status, noHeaders, undefined).message);
+  });
+
+  it('acepta el largo máximo de 40 caracteres y una sola letra', () => {
+    const cuarenta = `A${'_'.repeat(38)}Z`;
+    expect(cuarenta).toHaveLength(40);
+    expect(toApiError(409, noHeaders, { codigo: cuarenta }).codigo).toBe(cuarenta);
+    expect(toApiError(409, noHeaders, { codigo: 'X' }).codigo).toBe('X');
+  });
+
+  it.each([
+    ['<b>x</b>'],
+    ['ficha_desactualizada'],
+    ['FICHA DESACTUALIZADA'],
+    ['_FICHA'],
+    ['FICHA-1'],
+    [''],
+    [`A${'B'.repeat(40)}`],
+    [42],
+    [null],
+    [true],
+    [{ codigo: 'X' }],
+    [['FICHA_DESACTUALIZADA']],
+  ])('codigo con forma inválida %j da null', (codigo) => {
+    const err = toApiError(409, noHeaders, { codigo });
+    expect(err.codigo).toBeNull();
+    expect(err.kind).toBe('conflict');
+  });
+
+  it('sin cuerpo, cuerpo no objeto o sin la propiedad, codigo es null', () => {
+    expect(toApiError(409, noHeaders, undefined).codigo).toBeNull();
+    expect(toApiError(409, noHeaders, 'CONSENTIMIENTO_REQUERIDO').codigo).toBeNull();
+    expect(toApiError(409, noHeaders, ['CONSENTIMIENTO_REQUERIDO']).codigo).toBeNull();
+    expect(toApiError(409, noHeaders, { title: 'Conflicto' }).codigo).toBeNull();
+  });
+
+  it('el mensaje nunca incluye el codigo ni el detail', () => {
+    const err = toApiError(409, noHeaders, { codigo: 'FICHA_DESACTUALIZADA', detail: 'alergia a la penicilina' });
+    expect(err.message).not.toContain('FICHA_DESACTUALIZADA');
+    expect(err.message).not.toContain('penicilina');
+  });
+});
+
+describe('pacienteId del 409 de DNI duplicado (C-12, D3)', () => {
+  it.each([7, 1, Number.MAX_SAFE_INTEGER])('toma pacienteId %i de un 409', (pacienteId) => {
+    expect(toApiError(409, noHeaders, { title: 'DNI duplicado', pacienteId }).pacienteId).toBe(pacienteId);
+  });
+
+  it.each([['7'], [-1], [0], [1.5], [Number.MAX_SAFE_INTEGER + 2], [Number.NaN], [null], [true]])(
+    'pacienteId inválido %j da null',
+    (pacienteId) => {
+      expect(toApiError(409, noHeaders, { pacienteId }).pacienteId).toBeNull();
+    },
+  );
+
+  it.each([400, 404, 422, 500])('ignora pacienteId fuera de un 409 (%i)', (status) => {
+    expect(toApiError(status, noHeaders, { pacienteId: 7 }).pacienteId).toBeNull();
+  });
+
+  it('sin cuerpo o sin la propiedad, pacienteId es null', () => {
+    expect(toApiError(409, noHeaders, undefined).pacienteId).toBeNull();
+    expect(toApiError(409, noHeaders, { title: 'x' }).pacienteId).toBeNull();
+  });
+});
+
+describe('ApiError construido a mano (C-12)', () => {
+  it('codigo y pacienteId son null por defecto', () => {
+    const err = new ApiError('conflict', { status: 409 });
+    expect(err.codigo).toBeNull();
+    expect(err.pacienteId).toBeNull();
+  });
+
+  it('acepta codigo y pacienteId en los detalles (fixtures de tests de páginas)', () => {
+    const err = new ApiError('conflict', { status: 409, codigo: 'FICHA_DESACTUALIZADA', pacienteId: 3 });
+    expect(err.codigo).toBe('FICHA_DESACTUALIZADA');
+    expect(err.pacienteId).toBe(3);
+  });
+});

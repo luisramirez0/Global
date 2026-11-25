@@ -33,6 +33,8 @@ export interface ApiErrorDetails {
   title?: string | null;
   fieldErrors?: readonly FieldError[];
   retryAfterSeconds?: number | null;
+  codigo?: string | null;
+  pacienteId?: number | null;
 }
 
 export class ApiError extends Error {
@@ -42,6 +44,13 @@ export class ApiError extends Error {
   readonly title: string | null;
   readonly fieldErrors: readonly FieldError[];
   readonly retryAfterSeconds: number | null;
+  /**
+   * Código de negocio del ProblemDetail (p. ej. `FICHA_DESACTUALIZADA`), solo si tiene la forma esperada. La UI lo
+   * traduce a un mensaje fijo propio; nunca se muestra crudo (C-12, D3).
+   */
+  readonly codigo: string | null;
+  /** Paciente existente informado por el 409 de DNI duplicado (C-05); `null` en cualquier otro caso. */
+  readonly pacienteId: number | null;
 
   constructor(kind: ApiErrorKind, details: ApiErrorDetails = {}) {
     super(MESSAGES[kind]);
@@ -51,6 +60,8 @@ export class ApiError extends Error {
     this.title = details.title ?? null;
     this.fieldErrors = details.fieldErrors ?? [];
     this.retryAfterSeconds = details.retryAfterSeconds ?? null;
+    this.codigo = details.codigo ?? null;
+    this.pacienteId = details.pacienteId ?? null;
   }
 }
 
@@ -89,6 +100,21 @@ function parseRetryAfter(headers: Headers): number | null {
   return Number(raw.trim());
 }
 
+/** Mayúsculas y guion bajo, empieza con letra, 1 a 40 caracteres: lo que emite el backend (C-08). */
+const CODIGO = /^[A-Z][A-Z_]{0,39}$/;
+
+function parseCodigo(body: unknown): string | null {
+  if (!isRecord(body)) return null;
+  const codigo = body['codigo'];
+  return typeof codigo === 'string' && CODIGO.test(codigo) ? codigo : null;
+}
+
+function parsePacienteId(status: number, body: unknown): number | null {
+  if (status !== 409 || !isRecord(body)) return null;
+  const pacienteId = body['pacienteId'];
+  return typeof pacienteId === 'number' && Number.isSafeInteger(pacienteId) && pacienteId > 0 ? pacienteId : null;
+}
+
 /** Convierte una respuesta no exitosa en un ApiError. `body` es el JSON ya parseado o `undefined`. */
 export function toApiError(status: number, headers: Headers, body: unknown): ApiError {
   const kind = kindForStatus(status);
@@ -97,5 +123,7 @@ export function toApiError(status: number, headers: Headers, body: unknown): Api
     title: isRecord(body) && typeof body['title'] === 'string' ? body['title'] : null,
     fieldErrors: kind === 'validation' ? parseFieldErrors(body) : [],
     retryAfterSeconds: kind === 'rate_limited' ? parseRetryAfter(headers) : null,
+    codigo: parseCodigo(body),
+    pacienteId: parsePacienteId(status, body),
   });
 }

@@ -164,6 +164,24 @@ describe('errores', () => {
     expect(err.retryAfterSeconds).toBe(840);
   });
 
+  it('409 con codigo de negocio llega al ApiError (C-12)', async () => {
+    const { client, fetchFn } = setup();
+    fetchFn.mockResolvedValue(problemResponse(409, { codigo: 'FICHA_DESACTUALIZADA', detail: 'texto clínico' }));
+    const err = await catchApiError(client.request('PUT', '/pacientes/1/ficha', { body: {}, decode: decodeAny }));
+    expect(err.kind).toBe('conflict');
+    expect(err.codigo).toBe('FICHA_DESACTUALIZADA');
+    expect(err.pacienteId).toBeNull();
+    expect(err.message).not.toContain('clínico');
+  });
+
+  it('409 de DNI duplicado con pacienteId llega al ApiError (C-12)', async () => {
+    const { client, fetchFn } = setup();
+    fetchFn.mockResolvedValue(problemResponse(409, { pacienteId: 7 }));
+    const err = await catchApiError(client.request('POST', '/pacientes', { body: {}, decode: decodeAny }));
+    expect(err.pacienteId).toBe(7);
+    expect(err.codigo).toBeNull();
+  });
+
   it('500 con cuerpo HTML no propaga el cuerpo', async () => {
     const { client, fetchFn } = setup();
     fetchFn.mockResolvedValue(new Response('<h1>Error ana@consultorio.test</h1>', { status: 500 }));
