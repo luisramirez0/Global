@@ -32,7 +32,7 @@ El cliente SHALL enviar `Accept: application/json` en toda request y `Content-Ty
 - **THEN** la request lleva `Content-Type: application/json` y no lleva `Authorization`
 
 ### Requirement: Errores tipados de la API
-Toda respuesta no exitosa SHALL ser un `ApiError` con `kind` según el estado: `validation` (400, 422; `fieldErrors` de `errores`), `unauthorized` (401), `forbidden` (403), `conflict` (409), `rate_limited` (429; `retryAfterSeconds` de `Retry-After` o `null`), `server` (5xx), `unexpected` (otro). Un fallo de red MUST dar `network` y un tiempo de espera agotado MUST abortar y dar `timeout`. El mensaje MUST ser fijo por `kind`, sin el `detail` del servidor ni datos del cliente, aun con detalle de conflicto.
+Toda respuesta no exitosa SHALL ser un `ApiError` con `kind` según el estado: `validation` (400, 422; `fieldErrors` de `errores`), `unauthorized` (401), `forbidden` (403), `conflict` (409), `rate_limited` (429; `retryAfterSeconds` de `Retry-After` o `null`), `server` (5xx), `unexpected` (otro). Un fallo de red MUST dar `network` y un tiempo de espera agotado MUST abortar y dar `timeout`. El mensaje MUST ser fijo por `kind`, sin el `detail` del servidor ni datos del cliente, aun con detalle de conflicto. El `ApiError` MUST exponer `codigo`, tomado de la propiedad `codigo` del `ProblemDetail` solo si es un texto de 1 a 40 caracteres en mayúsculas y guion bajo que empieza con letra (si no, `null`), y `pacienteId`, tomado solo de un `409` cuyo `pacienteId` sea un entero positivo (si no, `null`). La UI MUST mostrar un mensaje genérico fijo ante un `codigo` desconocido.
 
 #### Scenario: Validación con errores por campo
 - **WHEN** la API responde `400` con `errores: [{campo: "email", mensaje: "formato inválido"}]`
@@ -54,6 +54,18 @@ Toda respuesta no exitosa SHALL ser un `ApiError` con `kind` según el estado: `
 - **GIVEN** un tiempo de espera de 15 s
 - **WHEN** la API no responde en 15 s
 - **THEN** la request se aborta y falla con `kind = timeout`
+
+#### Scenario: Código de negocio
+- **WHEN** la API responde `409` con `codigo: "FICHA_DESACTUALIZADA"`
+- **THEN** la request falla con `kind = conflict` y `codigo = "FICHA_DESACTUALIZADA"`
+
+#### Scenario: Código con forma inválida
+- **WHEN** la API responde `409` con `codigo: "<b>x</b>"` o un número
+- **THEN** `codigo` es `null` y el mensaje es el fijo de `conflict`
+
+#### Scenario: DNI duplicado
+- **WHEN** la API responde `409` con `pacienteId: 7`
+- **THEN** `pacienteId = 7`; con `pacienteId: "7"`, `-1` o en un `400`, `pacienteId` es `null`
 
 ### Requirement: Respuestas exitosas validadas
 El cliente SHALL validar la forma del JSON de cada respuesta exitosa con un decodificador por endpoint antes de entregarlo tipado, y MUST fallar con `kind = unexpected` si no coincide; una respuesta `204` o sin cuerpo MUST resolverse sin valor.
