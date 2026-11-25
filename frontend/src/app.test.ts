@@ -195,3 +195,26 @@ describe('configuración de agenda (C-11)', () => {
     },
   );
 });
+
+describe('rutas de pacientes con id inválido (C-12, A-D1)', () => {
+  it.each(['#/pacientes/abc', '#/pacientes/-1', '#/pacientes/0', '#/pacientes/01', '#/pacientes/1.5'])(
+    'con sesión %s va a inicio sin ninguna request además del me() del arranque',
+    async (hash) => {
+      storeSession();
+      window.history.replaceState(null, '', hash);
+      const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK));
+      await mount(fetchFn).ready;
+      expect(window.location.hash).toBe('#/inicio');
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      expect(fetchFn.mock.calls[0]?.[0]).toBe('http://api.test/api/auth/me');
+    },
+  );
+
+  it.each(['#/pacientes/abc', '#/pacientes/-1'])('sin sesión %s va a login sin requests', async (hash) => {
+    window.history.replaceState(null, '', hash);
+    const fetchFn = vi.fn<typeof fetch>();
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/login');
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+});
