@@ -2,6 +2,7 @@
 import { vi, type Mock } from 'vitest';
 import type { AgendaConfigApi } from '../api/agendaConfig';
 import type { AuthApi } from '../api/auth';
+import type { FichaApi } from '../api/ficha';
 import type { PacientesApi } from '../api/pacientes';
 import type { MeResponse, Rol } from '../api/types';
 import { createFlash, type PageContext } from '../pages/context';
@@ -13,6 +14,9 @@ export type AgendaMock = { [K in keyof AgendaConfigApi]: Mock<AgendaConfigApi[K]
 /** Cada método de la API de pacientes como `vi.fn` tipado (C-12). */
 export type PacientesMock = { [K in keyof PacientesApi]: Mock<PacientesApi[K]> };
 
+/** Cada método de la API de historia clínica como `vi.fn` tipado (C-12b). */
+export type FichaMock = { [K in keyof FichaApi]: Mock<FichaApi[K]> };
+
 export interface TestContext extends PageContext {
   api: {
     register: ReturnType<typeof vi.fn<AuthApi['register']>>;
@@ -21,6 +25,7 @@ export interface TestContext extends PageContext {
   };
   agenda: AgendaMock;
   pacientes: PacientesMock;
+  ficha: FichaMock;
   navigate: ReturnType<typeof vi.fn<(path: string) => void>>;
 }
 
@@ -56,11 +61,24 @@ function createPacientesMock(): PacientesMock {
   };
 }
 
+function createFichaMock(): FichaMock {
+  return {
+    listarConsentimientos: vi.fn<FichaApi['listarConsentimientos']>(),
+    textoVigente: vi.fn<FichaApi['textoVigente']>(),
+    registrarConsentimiento: vi.fn<FichaApi['registrarConsentimiento']>(),
+    obtenerFicha: vi.fn<FichaApi['obtenerFicha']>(),
+    guardarFicha: vi.fn<FichaApi['guardarFicha']>(),
+    listarNotas: vi.fn<FichaApi['listarNotas']>(),
+    crearNota: vi.fn<FichaApi['crearNota']>(),
+  };
+}
+
 export function createTestContext(): TestContext {
   return {
     api: { register: vi.fn<AuthApi['register']>(), login: vi.fn<AuthApi['login']>(), me: vi.fn<AuthApi['me']>() },
     agenda: createAgendaMock(),
     pacientes: createPacientesMock(),
+    ficha: createFichaMock(),
     session: createSession({ storage: sessionStorage, now: () => Date.now() }),
     navigate: vi.fn<(path: string) => void>(),
     flash: createFlash(),

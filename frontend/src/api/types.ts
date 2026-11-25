@@ -147,6 +147,56 @@ export interface PacienteRequest {
   obraSocialTexto: string | null;
 }
 
+/* Historia clínica (C-08; C-12b). Datos de salud: solo en memoria de la página (design D8). */
+
+export interface Consentimiento {
+  id: number;
+  versionTexto: string;
+  /** Instant ISO-8601. */
+  aceptadoEn: string;
+  registradoPorUsuarioId: number;
+}
+
+export interface TextoConsentimiento {
+  version: string;
+  contenido: string;
+  vigenteDesde: string;
+}
+
+/** Anamnesis. Ficha no cargada: campos clínicos, `version` y `actualizadaEn` en `null` (D5 de C-08). */
+export interface Ficha {
+  pacienteId: number;
+  alergias: string | null;
+  medicacionActual: string | null;
+  antecedentesMedicos: string | null;
+  enfermedadesRelevantes: string | null;
+  embarazo: boolean | null;
+  motivoConsulta: string | null;
+  observaciones: string | null;
+  version: number | null;
+  actualizadaEn: string | null;
+}
+
+/** Reemplazo completo: un campo en `null` queda vacío. `version` es la leída (`null` en la primera carga). */
+export interface FichaRequest {
+  alergias: string | null;
+  medicacionActual: string | null;
+  antecedentesMedicos: string | null;
+  enfermedadesRelevantes: string | null;
+  embarazo: boolean | null;
+  motivoConsulta: string | null;
+  observaciones: string | null;
+  version: number | null;
+}
+
+export interface Nota {
+  id: number;
+  fecha: string;
+  profesionalId: number;
+  turnoId: number | null;
+  texto: string;
+}
+
 export interface FiltroPacientes {
   /** Nombre, apellido o prefijo de DNI; vacío = sin filtro. Nunca va en la URL de la app (D1). */
   q: string;

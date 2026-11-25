@@ -148,6 +148,8 @@
   **Datos en el navegador y XSS**
   12. En DevTools, Application: `localStorage` vacío y `sessionStorage` solo con `global.session.v1`. Console sin mensajes de la app.
   13. Crear un paciente llamado `<img src=x onerror=alert(1)>`: se ve como texto en la lista y en el detalle, y no aparece ningún `alert`.
+> **Prueba manual de C-12a (7a.4): resultado pendiente.** El mensaje de la persona (2026-11-24) llegó con el texto de plantilla sin completar, así que no consta si pasó. Ella aprobó la 7a y pidió seguir con C-12b; el resultado se registra cuando lo informe.
+
 - [ ] 7a.5 **Sin handoff ni `[x]` en CHANGES.md** (van con C-12b). Commit, push y PR solo con autorización de la persona (regla 10), avisando a integrante-1/2 (regla 12). La descripción del PR aclara que C-12 sigue abierto.
 
 ---
@@ -156,8 +158,8 @@
 
 ## 5. Ficha clínica
 
-- [ ] 5.0 Línea base de C-12b: `npm test`, lint y typecheck en verde sobre C-12a.
-- [ ] 5.1 RED: `api/ficha.test.ts`, las 7 operaciones (ruta, cuerpo, query de notas) y sus decodificadores (`embarazo` booleano o `null`, ficha vacía, `Pagina<Nota>`, `Instant` ISO). GREEN: `api/ficha.ts`, decodificadores, tipos y fixtures `api/__fixtures__/ficha.ts`. `PageContext.ficha` en `app.ts` y `FichaMock` en `test-support/pages.ts`.
+- [x] 5.0 (681/681 en 32 archivos, lint y typecheck limpios, sobre `bef5bb4`) Línea base de C-12b: `npm test`, lint y typecheck en verde sobre C-12a.
+- [x] 5.1 (36 tests; RED por módulo inexistente, ejecutado) RED: `api/ficha.test.ts`, las 7 operaciones (ruta, cuerpo, query de notas) y sus decodificadores (`embarazo` booleano o `null`, ficha vacía, `Pagina<Nota>`, `Instant` ISO). GREEN: `api/ficha.ts`, decodificadores, tipos y fixtures `api/__fixtures__/ficha.ts`. `PageContext.ficha` en `app.ts` y `FichaMock` en `test-support/pages.ts`.
 - [ ] 5.2 RED: `pages/ficha/validacion.test.ts`: largos 4000 y 10000; nota en blanco; casilla de consentimiento obligatoria. GREEN. RED en `pages/permisos.test.ts`: `puedeVerFicha` para los 3 roles y sin perfil. GREEN.
 - [ ] 5.3 RED: `pages/ficha/ficha.test.ts`, **consentimiento** (D4):
   - Sin consentimiento: texto literal y casilla; sin anamnesis ni notas en el DOM; sin `GET /ficha` ni `GET /notas`.

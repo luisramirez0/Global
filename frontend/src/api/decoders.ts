@@ -2,8 +2,12 @@ import { ApiError } from './errors';
 import {
   ROLES,
   type Bloqueo,
+  type Consentimiento,
   type DiaSemana,
+  type Ficha,
   type Horario,
+  type Nota,
+  type TextoConsentimiento,
   type LoginResponse,
   type MeResponse,
   type Paciente,
@@ -202,5 +206,66 @@ export function paginaOf<T>(decode: (value: unknown) => T): (value: unknown) => 
       totalElementos: entero(o, 'totalElementos', 0),
       totalPaginas: entero(o, 'totalPaginas', 0),
     };
+  };
+}
+
+/* Historia clínica (C-08; C-12b). */
+
+function boolOrNull(o: Obj, key: string): boolean | null {
+  return o[key] === null || o[key] === undefined ? null : bool(o, key);
+}
+
+function instantOrNull(o: Obj, key: string): string | null {
+  return o[key] === null || o[key] === undefined ? null : instant(o, key);
+}
+
+/** `@Version` de JPA: entero ≥ 0, o `null` si la ficha no fue cargada. */
+function versionOrNull(o: Obj, key: string): number | null {
+  return o[key] === null || o[key] === undefined ? null : entero(o, key, 0);
+}
+
+export function decodeConsentimiento(value: unknown): Consentimiento {
+  const o = obj(value);
+  return {
+    id: id(o, 'id'),
+    versionTexto: str(o, 'versionTexto', { nonEmpty: true }),
+    aceptadoEn: instant(o, 'aceptadoEn'),
+    registradoPorUsuarioId: id(o, 'registradoPorUsuarioId'),
+  };
+}
+
+export function decodeTextoConsentimiento(value: unknown): TextoConsentimiento {
+  const o = obj(value);
+  return {
+    version: str(o, 'version', { nonEmpty: true }),
+    contenido: str(o, 'contenido'),
+    vigenteDesde: instant(o, 'vigenteDesde'),
+  };
+}
+
+export function decodeFicha(value: unknown): Ficha {
+  const o = obj(value);
+  return {
+    pacienteId: id(o, 'pacienteId'),
+    alergias: strOrNull(o, 'alergias'),
+    medicacionActual: strOrNull(o, 'medicacionActual'),
+    antecedentesMedicos: strOrNull(o, 'antecedentesMedicos'),
+    enfermedadesRelevantes: strOrNull(o, 'enfermedadesRelevantes'),
+    embarazo: boolOrNull(o, 'embarazo'),
+    motivoConsulta: strOrNull(o, 'motivoConsulta'),
+    observaciones: strOrNull(o, 'observaciones'),
+    version: versionOrNull(o, 'version'),
+    actualizadaEn: instantOrNull(o, 'actualizadaEn'),
+  };
+}
+
+export function decodeNota(value: unknown): Nota {
+  const o = obj(value);
+  return {
+    id: id(o, 'id'),
+    fecha: instant(o, 'fecha'),
+    profesionalId: id(o, 'profesionalId'),
+    turnoId: idOrNull(o, 'turnoId'),
+    texto: str(o, 'texto'),
   };
 }

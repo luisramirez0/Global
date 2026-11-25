@@ -1,5 +1,6 @@
 import type { AgendaConfigApi } from '../api/agendaConfig';
 import type { AuthApi } from '../api/auth';
+import type { FichaApi } from '../api/ficha';
 import type { PacientesApi } from '../api/pacientes';
 import type { Session } from '../state/session';
 
@@ -10,6 +11,8 @@ export interface PageContext {
   agenda: AgendaConfigApi;
   /** Pacientes (C-12). */
   pacientes: PacientesApi;
+  /** Historia clínica (C-12b). Datos de salud: solo en memoria de la página. */
+  ficha: FichaApi;
   session: Session;
   navigate(path: string): void;
   flash: Flash;
