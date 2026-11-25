@@ -19,7 +19,7 @@ import {
   mensajeDeError,
   tieneCodigo,
 } from './mensajes';
-import { NOTAS_POR_PAGINA, crearNotas } from './notas';
+import { NOTAS_POR_PAGINA, crearNotas, type Notas } from './notas';
 import { validarAceptacion } from './validacion';
 
 /**
@@ -33,6 +33,7 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
   /** Generación: sube al recargar o al bloquear, para descartar respuestas de un estado anterior. */
   let gen = 0;
   let anamnesis: Anamnesis | null = null;
+  let notasClinicas: Notas | null = null;
 
   const encabezado = h('p', { className: 'encabezado-paciente' });
   const estado = h('p', { className: 'estado', attrs: { role: 'status' } });
@@ -236,19 +237,28 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
       ([ficha, notas]) => {
         if (!vigente(mia)) return;
         clear(clinico);
-        anamnesis?.liberar();
+        liberarClinico();
+        const anunciar = (mensaje: string): void => {
+          alerta.clear();
+          estado.textContent = mensaje;
+        };
         anamnesis = crearAnamnesis({
           ficha,
           soloLectura: false,
           guardar: (request) => ctx.ficha.guardarFicha(pacienteId, request),
           recargar: () => ctx.ficha.obtenerFicha(pacienteId),
           alError: errorClinico,
-          anunciar: (mensaje) => {
-            alerta.clear();
-            estado.textContent = mensaje;
-          },
+          anunciar,
         });
-        clinico.append(anamnesis.element, crearNotas({ inicial: notas }).element);
+        notasClinicas = crearNotas({
+          inicial: notas,
+          soloLectura: false,
+          listar: (page) => ctx.ficha.listarNotas(pacienteId, page, NOTAS_POR_PAGINA),
+          crear: (texto) => ctx.ficha.crearNota(pacienteId, texto),
+          alError: errorClinico,
+          anunciar,
+        });
+        clinico.append(anamnesis.element, notasClinicas.element);
       },
       (error: unknown) => {
         if (!vigente(mia)) return;
@@ -256,6 +266,13 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
         else reintentable(clinico, error, () => cargarClinico(clinico, mia));
       },
     );
+  }
+
+  function liberarClinico(): void {
+    anamnesis?.liberar();
+    notasClinicas?.liberar();
+    anamnesis = null;
+    notasClinicas = null;
   }
 
   /** Errores de escritura o lectura clínica que cambian el estado de toda la página. `true` si los manejó. */
@@ -269,8 +286,7 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
 
   /** 409 CONSENTIMIENTO_REQUERIDO (p. ej. una carrera): se descartan los datos clínicos y se vuelve al bloqueo. */
   function bloquear(): void {
-    anamnesis?.liberar();
-    anamnesis = null;
+    liberarClinico();
     estado.textContent = '';
     clear(cuerpo);
     sinConsentimiento();
@@ -284,8 +300,7 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
     element,
     dispose() {
       disposed = true;
-      anamnesis?.liberar();
-      anamnesis = null;
+      liberarClinico();
       clear(cuerpo);
       encabezado.textContent = '';
     },

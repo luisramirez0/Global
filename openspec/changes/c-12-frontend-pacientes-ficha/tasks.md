@@ -205,7 +205,7 @@
 > - **M3, "Cargar la versión actual" recarga sin confirmación**: fallan 2 tests (la confirmación previa y "Cancelar").
 > - **M4, el 409 pone la `version` en `null`**: falla `no se pisa la version: un nuevo guardado vuelve a mandar la 3`.
 
-- [ ] 5.5 RED: **notas** (D7):
+- [x] 5.5 (20 tests en `pages/ficha/notas.test.ts`; RED real 17/20 contra la vista de 5.3. Los 3 que ya pasaban son el listado y "sin Ver más" con una página. También: deduplicación al pedir más tras crear una nota, "Ver más" deshabilitado mientras pide, 409 `CONSENTIMIENTO_REQUERIDO` al crear o pedir más → bloqueo, y texto de más de 10000 con aviso según A-D5b) RED: **notas** (D7):
   - Lista y "Ver más".
   - Nueva nota sin `turnoId`, que aparece primera.
   - `422 PROFESIONAL_NO_VINCULADO` conserva el texto.
@@ -213,6 +213,20 @@
   - "Profesional #id".
 
   GREEN: `pages/ficha/notas.ts`.
+> **Nota de mutación (5.5, 2026-11-25).** Sobre `notas.ts`, sin commitear, restaurado desde una copia en memoria. **Mueren los 10**:
+> - N1: "Ver más" pide la misma página.
+> - N2: la nota nueva va al final.
+> - N3: el 422 borra lo escrito.
+> - N4: el 422 muestra el mensaje genérico.
+> - N5: no descarta duplicadas.
+> - N6: "Ver más" siempre visible (2 tests).
+> - N7: se envía el texto recortado.
+> - N8: no se vacía el campo tras crear.
+> - N9: sin protección de doble envío.
+> - N10: tras un error, "Ver más" queda deshabilitado.
+>
+> Salvo N6, cada uno lo detecta un solo test.
+
 - [ ] 5.6 RED: **paciente inactivo** (D6): solo lectura con y sin consentimiento; `409 PACIENTE_INACTIVO` → solo lectura. GREEN.
 - [ ] 5.7 RED: **rol** (D2): `RECEPCION` y sin perfil → aviso y **cero llamadas** a los mocks de pacientes y ficha; `PROFESIONAL` y `ADMIN` → piden paciente y consentimientos; `403` → mensaje fijo. GREEN.
 - [ ] 5.8 RED: **higiene** (D8):
