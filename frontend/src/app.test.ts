@@ -195,3 +195,42 @@ describe('configuración de agenda (C-11)', () => {
     },
   );
 });
+
+describe('auditoría (C-15)', () => {
+  const PAGINA_VACIA = { contenido: [], pagina: 0, tamanio: 20, totalElementos: 0, totalPaginas: 0 };
+
+  it('ADMIN ve "Auditoría" en el menú y la pantalla pide el log con el token', async () => {
+    storeSession();
+    window.history.replaceState(null, '', '#/auditoria');
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(200, ME_OK))
+      .mockResolvedValueOnce(jsonResponse(200, PAGINA_VACIA));
+    await mount(fetchFn).ready;
+    const link = document.querySelector('nav[aria-label="Principal"] a[href="#/auditoria"]');
+    expect(link?.textContent).toBe('Auditoría');
+    expect(main().querySelector('h1')?.textContent).toBe('Auditoría');
+    await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(2));
+    expect(fetchFn.mock.calls[1]?.[0]).toBe('http://api.test/api/auditoria?page=0');
+    expect(new Headers(fetchFn.mock.calls[1]?.[1]?.headers).get('Authorization')).toBe('Bearer t1');
+  });
+
+  it('RECEPCION no ve el ítem y, si entra por URL, no se pide el log', async () => {
+    storeSession();
+    window.history.replaceState(null, '', '#/auditoria');
+    const recepcion = { ...ME_OK, usuario: { ...ME_OK.usuario, rol: 'RECEPCION' } };
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(200, recepcion));
+    await mount(fetchFn).ready;
+    expect(document.querySelector('nav[aria-label="Principal"] a[href="#/auditoria"]')).toBeNull();
+    expect(main().textContent).toContain('Tu rol no tiene acceso a la auditoría.');
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin sesión #/auditoria redirige al login sin pedir datos', async () => {
+    window.history.replaceState(null, '', '#/auditoria');
+    const fetchFn = vi.fn<typeof fetch>();
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/login');
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+});

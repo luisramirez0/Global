@@ -106,3 +106,48 @@ export interface FiltroBloqueos {
   desde?: string;
   hasta?: string;
 }
+
+/** Contrato de `GET /api/auditoria` (knowledge-base/entrega/C-06.md) y del export de C-15. */
+
+export const ACCIONES_AUDITORIA = ['READ', 'CREATE', 'UPDATE', 'DELETE', 'EXPORT', 'LOGIN'] as const;
+export type AccionAuditoria = (typeof ACCIONES_AUDITORIA)[number];
+
+/** Valores del detalle: el backend solo admite números, booleanos y códigos (sin PII). */
+export type ValorDetalle = string | number | boolean;
+
+export interface EntradaAuditoria {
+  id: number;
+  /** Instant UTC ISO-8601. */
+  fecha: string;
+  usuarioId: number | null;
+  accion: AccionAuditoria;
+  entidad: string;
+  entidadId: number | null;
+  detalle: Readonly<Record<string, ValorDetalle>> | null;
+  ip: string | null;
+}
+
+export interface Pagina<T> {
+  contenido: T[];
+  pagina: number;
+  tamanio: number;
+  totalElementos: number;
+  totalPaginas: number;
+}
+
+/**
+ * Filtros de la consulta. `desde` inclusivo y `hasta` exclusivo, como instantes UTC. `entidadId` solo junto con
+ * `entidad`: el backend no distingue entidades por id (design D8 de C-15).
+ */
+export interface FiltrosAuditoria {
+  desde?: string;
+  hasta?: string;
+  accion?: AccionAuditoria;
+  entidad?: string;
+  entidadId?: number;
+  usuarioId?: number;
+  page: number;
+}
+
+/** Paquete del export: se descarga tal cual, sin mostrarlo (design D11 de C-15). */
+export type ExportPaciente = Readonly<Record<string, unknown>>;

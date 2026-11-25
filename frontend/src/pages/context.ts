@@ -1,4 +1,5 @@
 import type { AgendaConfigApi } from '../api/agendaConfig';
+import type { AuditoriaApi } from '../api/auditoria';
 import type { AuthApi } from '../api/auth';
 import type { Session } from '../state/session';
 
@@ -7,6 +8,8 @@ export interface PageContext {
   api: AuthApi;
   /** Configuración de agenda (C-11). */
   agenda: AgendaConfigApi;
+  /** Log de auditoría y export de pacientes (C-15). */
+  auditoria: AuditoriaApi;
   session: Session;
   navigate(path: string): void;
   flash: Flash;

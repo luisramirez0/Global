@@ -16,3 +16,15 @@ describe('rutas de configuración (C-11)', () => {
     expect(NAV_ITEMS.every((item) => ROUTES.some((r) => r.path === item.path))).toBe(true);
   });
 });
+
+describe('ruta de auditoría (C-15)', () => {
+  it('es una ruta protegida registrada', () => {
+    const route = ROUTES.find((r) => r.path === '/auditoria');
+    expect(route).toBeDefined();
+    expect(route?.guestOnly).not.toBe(true);
+  });
+
+  it('el menú la ofrece solo a ADMIN y PROFESIONAL', () => {
+    expect(NAV_ITEMS).toContainEqual({ path: '/auditoria', label: 'Auditoría', roles: ['ADMIN', 'PROFESIONAL'] });
+  });
+});

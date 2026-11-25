@@ -1,3 +1,4 @@
+import type { Rol } from '../api/types';
 import type { Profile } from '../state/session';
 import { h } from '../utils/dom';
 
@@ -6,6 +7,15 @@ import { h } from '../utils/dom';
 export interface NavItem {
   path: string;
   label: string;
+  /**
+   * Roles que ven el ítem (C-15 design D10); sin `roles`, lo ven todos. Solo decide qué se muestra: el backend
+   * sigue autorizando cada request.
+   */
+  roles?: readonly Rol[];
+}
+
+function visiblePara(item: NavItem, rol: Rol): boolean {
+  return item.roles === undefined || item.roles.includes(rol);
 }
 
 export interface LayoutOptions {
@@ -59,7 +69,7 @@ export function createLayout(options: LayoutOptions): Layout {
       h(
         'nav',
         { attrs: { 'aria-label': 'Principal' } },
-        h('ul', {}, ...options.navItems.map((item) => h('li', {}, h('a', { attrs: { href: `#${item.path}` } }, item.label)))),
+        h('ul', {}, ...options.navItems.filter((item) => visiblePara(item, profile.usuario.rol)).map((item) => h('li', {}, h('a', { attrs: { href: `#${item.path}` } }, item.label)))),
       ),
     );
   }

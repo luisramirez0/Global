@@ -376,7 +376,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
 ## FASE 4 — Cumplimiento y entrega
 
 ### [C-15] `auditoria-export-ui`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (verificación técnica en H2 y manual contra MySQL 8.4 + UI, 2026-11-25), en la rama `c-15-auditoria-export-ui`, change `openspec/changes/c-15-auditoria-export-ui` (todavía sin archivar). Manual: export del paciente de prueba por API y UI con archivo descargado; RECEPCION sin ítem "Auditoría" y con mensaje de sin permiso. **Pendiente**: review de integrante-1/2 (regla 12) y archivo del change tras el merge. Evidencia: backend 811/811 con `./gradlew test` (línea base 785; 26 tests nuevos: consultas con `join fetch` y aislamiento A/B, paquete completo y orden, encabezados de descarga, `EXPORT` con detalle de conteos, paciente vacío y dado de baja, 404 propio y entre tenants sin auditoría, RECEPCION 403, sin token 401, fail-closed sin mocks, logs sin PII, caracterización de `entidadId`, arquitectura "nada `readOnly`" y transacción programática no `readOnly`; 6 mutaciones detectadas). Frontend 469/469 en 29 archivos (línea base 393; 76 tests nuevos; 9 mutaciones detectadas); lint, typecheck y build limpios. Sin migraciones ni dependencias nuevas; `agenda/` y `auditoria/` sin cambios. Corrige el contrato de C-08 (`entidadId` debe combinarse con `entidad`). Handoff: `knowledge-base/entrega/C-15.md`
 - **Resultado**: pantalla de log de accesos y exportación JSON de los datos de un paciente, registrando `EXPORT`.
 - **Scope**:
   - `GET /api/pacientes/{id}/export` (datos, ficha, turnos, notas; solo ADMIN/PROFESIONAL), `EXPORT` en AuditLog (US-040).
