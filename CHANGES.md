@@ -271,7 +271,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/10_preguntas_abiertas.md` §PA-07, §PA-08
 
 ### [C-09] `recordatorios-whatsapp-email`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (verificación técnica en H2, 2026-11-25; pendiente la verificación manual contra MySQL 8.4 por la persona, PR y archivo del change). Evidencia: backend 953/953 con `./gradlew test` en dos corridas iguales, 955/955 tras la review de STARTTLS (línea base 811; 142 tests nuevos: enlace `wa.me` y E.164, plantilla sin datos clínicos, WhatsApp y email con auditoría fail-closed, SMTP caído (`502`) y sin configurar (`503`) con fake del puerto, pendientes, RBAC, aislamiento A/B, test de arquitectura `@Audited`/`readOnly`, logs sin PII y turno desaparecido); sin migraciones; dependencia nueva `spring-boot-starter-mail`. **Pendiente**: review de integrante-1/2 (regla 12; `ApiExceptionHandler` y `TelefonoE164` fuera de `recordatorio/`). Handoff: `knowledge-base/entrega/C-09.md`
 - **Resultado**: el endpoint devuelve un enlace `wa.me` válido y registra Recordatorio `GENERADO`; el email se envía por SMTP con manejo de error.
 - **Scope**:
   - `GET /api/turnos/{id}/recordatorio/whatsapp` → `https://wa.me/<E164>?text=<mensaje codificado>`; paciente sin teléfono → error controlado (RN-CO-03).
