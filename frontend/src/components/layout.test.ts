@@ -74,3 +74,33 @@ describe('layout', () => {
     expect(document.activeElement).toBe(layout.main);
   });
 });
+
+describe('menú según rol (C-15 design D10)', () => {
+  const ITEMS = [
+    { path: '/inicio', label: 'Inicio' },
+    { path: '/auditoria', label: 'Auditoría', roles: ['ADMIN', 'PROFESIONAL'] as const },
+  ];
+
+  function enlaces(rol: 'ADMIN' | 'PROFESIONAL' | 'RECEPCION'): string[] {
+    const layout = createLayout({ appName: 'Global', navItems: ITEMS, onLogout: vi.fn() });
+    document.body.replaceChildren(layout.root);
+    layout.update({ ...ME_OK, usuario: { ...ME_OK.usuario, rol } });
+    return [...layout.root.querySelectorAll('nav a')].map((a) => a.textContent ?? '');
+  }
+
+  it('ADMIN y PROFESIONAL ven el ítem restringido', () => {
+    expect(enlaces('ADMIN')).toEqual(['Inicio', 'Auditoría']);
+    expect(enlaces('PROFESIONAL')).toEqual(['Inicio', 'Auditoría']);
+  });
+
+  it('RECEPCION no lo ve; los ítems sin roles se muestran a todos', () => {
+    expect(enlaces('RECEPCION')).toEqual(['Inicio']);
+  });
+
+  it('al cambiar de perfil se recalcula el menú', () => {
+    const layout = createLayout({ appName: 'Global', navItems: ITEMS, onLogout: vi.fn() });
+    layout.update({ ...ME_OK, usuario: { ...ME_OK.usuario, rol: 'RECEPCION' } });
+    layout.update(ME_OK);
+    expect([...layout.root.querySelectorAll('nav a')].map((a) => a.textContent)).toContain('Auditoría');
+  });
+});
