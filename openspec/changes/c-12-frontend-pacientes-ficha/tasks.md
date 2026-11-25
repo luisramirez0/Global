@@ -284,7 +284,11 @@
 
 ## 6b. Escape de contenido — historia clínica
 
-- [ ] 6b.1 Tests con `<img src=x onerror=alert(1)>`, `<script>alert(1)</script>` y `"><svg onload=…>`:
+- [x] 6b.1 (`pages/ficha/xss.test.ts`: 27 casos, 9 escenarios × los 3 payloads de la 6a.
+  - Escenarios: texto y versión del consentimiento (también en la etiqueta de la casilla), versión del consentimiento registrado, las 6 áreas de la anamnesis editable, las 6 en solo lectura, texto de las notas, nota nueva, texto sin guardar de D6 (anamnesis y nota), encabezado del paciente, y errores del servidor (`title` de un 403 oculto, mensaje por campo de un 400 literal).
+  - Además de buscar `img`, `script` y `svg`, verifica que ningún elemento tenga atributos `on*`.
+  - **Sin RED**: pasaron al escribirlos, porque todo se arma con `h()`/`textContent`.
+  - Mutación con `innerHTML`, mueren los 5: X1 texto de nota (6 tests), X2 texto de consentimiento (3), X3 anamnesis en solo lectura (3), X4 encabezado (3), X5 nota sin guardar (3)) Tests con `<img src=x onerror=alert(1)>`, `<script>alert(1)</script>` y `"><svg onload=…>`:
   - En el texto de consentimiento y su versión.
   - En cada campo de la anamnesis (lectura y solo lectura de paciente inactivo).
   - En el texto de las notas.
