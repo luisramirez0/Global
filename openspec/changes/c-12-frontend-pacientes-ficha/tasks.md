@@ -180,7 +180,7 @@
 >
 > **Orden acordado (2026-11-25):** `/pacientes/:id/ficha` se registra recién en 5.9, después de que pase la 5.7 (RECEPCION sin requests). Hasta entonces siguen vigentes los tests de C-12a 3.4 (`app.test.ts`, `routes.test.ts`) y 4.4 (`lista.test.ts`).
 
-- [ ] 5.4 RED: **anamnesis** (D5, A-D5):
+- [x] 5.4 (20 tests en `pages/ficha/anamnesis.test.ts`; RED real 20/20 contra la vista de solo lectura de 5.3. Un 409 sin código no es `FICHA_DESACTUALIZADA`: mensaje genérico, sin "Cargar la versión actual". Un `409 CONSENTIMIENTO_REQUERIDO` al guardar vuelve al bloqueo) RED: **anamnesis** (D5, A-D5):
   - Primera carga con `version: null` y blancos → `null`.
   - Guardado con la `version` leída; tres estados de `embarazo`.
   - `409 FICHA_DESACTUALIZADA` conserva lo escrito y la `version`.
@@ -188,6 +188,13 @@
   - Errores por campo del servidor.
 
   GREEN: `pages/ficha/anamnesis.ts`.
+> **Nota de mutación (5.4, 2026-11-25).** Sobre `anamnesis.ts`, sin commitear, restaurado desde una copia en memoria. Mueren los 5:
+> - **M1, ante el 409 llama a `recargar()`**: fallan 4 tests. `recargar()` no llega a pedir nada porque `ocupado` sigue en `true`; en la práctica este mutante quita la UI del conflicto.
+> - **M1b, ante el 409 pide la ficha y pisa el formulario**: fallan 5 tests, entre ellos `lo escrito se conserva y no se vuelve a pedir la ficha`.
+> - **M2, no actualiza la `version` tras guardar**: fallan 2 tests (`guarda con la version leída y después usa la version nueva…` y la recarga confirmada).
+> - **M3, "Cargar la versión actual" recarga sin confirmación**: fallan 2 tests (la confirmación previa y "Cancelar").
+> - **M4, el 409 pone la `version` en `null`**: falla `no se pisa la version: un nuevo guardado vuelve a mandar la 3`.
+
 - [ ] 5.5 RED: **notas** (D7):
   - Lista y "Ver más".
   - Nueva nota sin `turnoId`, que aparece primera.
