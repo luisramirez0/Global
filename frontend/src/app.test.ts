@@ -197,7 +197,7 @@ describe('configuración de agenda (C-11)', () => {
 });
 
 describe('rutas de pacientes con id inválido (C-12, A-D1)', () => {
-  it.each(['#/pacientes/abc', '#/pacientes/-1', '#/pacientes/0', '#/pacientes/01', '#/pacientes/1.5'])(
+  it.each(['#/pacientes/abc', '#/pacientes/-1', '#/pacientes/0', '#/pacientes/01', '#/pacientes/1.5', '#/pacientes/9007199254740993'])(
     'con sesión %s va a inicio sin ninguna request además del me() del arranque',
     async (hash) => {
       storeSession();
