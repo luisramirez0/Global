@@ -148,9 +148,9 @@
   **Datos en el navegador y XSS**
   12. En DevTools, Application: `localStorage` vacío y `sessionStorage` solo con `global.session.v1`. Console sin mensajes de la app.
   13. Crear un paciente llamado `<img src=x onerror=alert(1)>`: se ve como texto en la lista y en el detalle, y no aparece ningún `alert`.
-> **Prueba manual de C-12a (7a.4): resultado pendiente.** El mensaje de la persona (2026-11-24) llegó con el texto de plantilla sin completar, así que no consta si pasó. Ella aprobó la 7a y pidió seguir con C-12b; el resultado se registra cuando lo informe.
+> **Prueba manual de C-12a (7a.4), resultado informado por la persona el 2026-11-25**: OK los pasos 1 a 19, salvo el paso 17 con RECEPCION, que no se confirmó explícitamente.
 
-- [ ] 7a.5 **Sin handoff ni `[x]` en CHANGES.md** (van con C-12b). Commit, push y PR solo con autorización de la persona (regla 10), avisando a integrante-1/2 (regla 12). La descripción del PR aclara que C-12 sigue abierto.
+- [ ] 7a.5 (handoff y `[x]` hechos con C-12b; push y PR siguen pendientes de autorización) **Sin handoff ni `[x]` en CHANGES.md** (van con C-12b). Commit, push y PR solo con autorización de la persona (regla 10), avisando a integrante-1/2 (regla 12). La descripción del PR aclara que C-12 sigue abierto.
 
 ---
 
@@ -301,7 +301,7 @@
 - [x] 7b.1 (886/886 en 42 archivos; lint y typecheck limpios; build: JS 66,44 kB / 21,44 kB gzip, CSS 2,01 kB; `dist/` ignorado por git) `npm test`, `npm run lint`, `npm run typecheck` y `npm run build` limpios; anotar conteos y tamaño del bundle.
 - [x] 7b.2 (sin resultados. `sessionStorage` solo en el código de sesión de C-10: `state/session.ts`, la inyección en `app.ts` y un comentario en `main.ts`; nunca en `pages/`, lo que además verifica `tests/tooling/no-storage-in-pages.test.ts`) `grep` en `frontend/src` fuera de los tests: `innerHTML|outerHTML|insertAdjacentHTML|localStorage|console\.|: any|as any` sin resultados; `sessionStorage` solo en `state/session.ts`.
 - [x] 7b.3 (`git diff main -- backend` vacío, sin migraciones. En los tests que ya existían en `main` hay 0 líneas borradas: `errors`, `http`, `app`, `router`, `routes`. La excepción es `form.test.ts`, con 1, que es el import ampliado en 3.1) `git diff main -- backend` vacío; tests de rutas exactas existentes sin cambios (2.3).
-- [ ] 7b.4 Guía de verificación manual de la ficha para la persona. **Pendiente de que la persona la ejecute.** Contra la API real, con backend y MySQL levantados por ella y `npm run dev`, en Chrome con DevTools (Network y Application).
+- [x] 7b.4 (**resultado parcial, informado por la persona el 2026-11-25**. Núcleo OK: paso 20, RECEPCION sin permiso ni requests; pasos 2 a 4, sin consentimiento con la ficha y las notas ocultas; registro del consentimiento v1 con fecha y hora; anamnesis guardada con "Ficha guardada."; nota agregada sin edición. **No probados a mano**: paso 9 (409 con dos pestañas), pasos 10 a 12 (texto largo pegado, A-D5b), paso 16 (opcional), pasos 17 a 19 (baja) y paso 24 (auditoría). Quedan como pendientes en el handoff) Guía de verificación manual de la ficha para la persona. Contra la API real, con backend y MySQL levantados por ella y `npm run dev`, en Chrome con DevTools (Network y Application).
 
   **Preparación**
   1. Iniciar sesión con ADMIN.
@@ -379,5 +379,5 @@
       - `CREATE`/`UPDATE FichaClinica` y `CREATE NotaClinica`;
       - todos con `entidad_id` = id del paciente;
       - **ninguna** fila por los intentos de RECEPCION.
-- [ ] 7b.5 Handoff `knowledge-base/entrega/C-12.md` (cubre C-12a y C-12b). Deuda: autor por id, sin `version` en paciente, respuestas tardías no abortadas.
-- [ ] 7b.6 Tras la verificación manual de la persona: `[x]` en `CHANGES.md` §C-12 con evidencia. Commit, push y PR solo con autorización (regla 10), avisando a integrante-1/2 (regla 12). Archivo del change y sincronización de specs después del merge de C-12b.
+- [x] 7b.5 Handoff `knowledge-base/entrega/C-12.md` (cubre C-12a y C-12b). Deuda: autor por id, sin `version` en paciente, respuestas tardías no abortadas.
+- [x] 7b.6 (`[x]` en `CHANGES.md` §C-12 con la evidencia y los pasos manuales no probados; commit hecho, **push y PR pendientes de autorización**) Tras la verificación manual de la persona: `[x]` en `CHANGES.md` §C-12 con evidencia. Commit, push y PR solo con autorización (regla 10), avisando a integrante-1/2 (regla 12). Archivo del change y sincronización de specs después del merge de C-12b.
