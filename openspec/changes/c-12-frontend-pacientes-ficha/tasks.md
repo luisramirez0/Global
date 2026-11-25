@@ -5,7 +5,7 @@
 > - Vitest + jsdom. La API se simula con `vi.fn` y fixtures con el contrato real de C-05 y C-08.
 > - No se levanta el stack (regla 9). Sin cambios en `backend/` ni `db/migration`.
 > - **Governance ALTO**: review de integrante-1 o integrante-2.
-> - D1–D11 aprobadas por Integrante 5 (2026-11-24), con los ajustes A-D1, A-D3, A-D5, A-D7 y A-D9.
+> - D1–D11 aprobadas por Integrante 5, responsable de C-12 (confirmado el 2026-11-24), con los ajustes A-D1, A-D3, A-D5, A-D7, A-D9 y A-D11.
 >
 > **Dos partes** (design §Partición):
 > - **C-12a** (§0–4, 6a, 7a): pacientes, router y `ApiError`. Debe poder revisarse y mergearse sola: sin la ruta `/pacientes/:id/ficha`, sin el enlace "Ficha" y sin handoff ni `[x]` en CHANGES.md.
@@ -72,7 +72,7 @@
   - **Sin enlace "Ficha"** (C-12a): con `ADMIN`, `PROFESIONAL` y `RECEPCION`, ninguna fila tiene un enlace o botón "Ficha" ni un `href` que termine en `/ficha`. C-12b reemplaza este caso (5.9).
 
   GREEN: `pages/pacientes/lista.ts`.
-- [x] 4.5 (26 tests; un 409 con `codigo` no es DNI duplicado, ver design D11) RED: `pages/pacientes/formulario.test.ts`:
+- [x] 4.5 (27 tests; A-D11: DNI duplicado = 409 con `pacienteId`, con o sin `codigo`; sin `pacienteId`, genérico) RED: `pages/pacientes/formulario.test.ts`:
   - Alta y edición con normalización.
   - Errores locales.
   - **Errores del servidor que la validación local deja pasar** (A-D9).
@@ -84,6 +84,16 @@
 
   GREEN: `pages/pacientes/formulario.ts`.
 
+> **Nota de mutación (4.3, 2026-11-24): compensa el RED que faltó.** Se aplicaron 34 mutantes sobre `validacion.ts`, uno por vez, con `validacion.test.ts` y `formulario.test.ts`, restaurando desde git después de cada uno (`git diff` vacío al final). Cubren:
+> - Largo y forma del DNI, y sus separadores.
+> - Fecha futura (`>` → `>=`, sin chequeo), calendario y fecha inválida.
+> - E.164: 7 y 16 dígitos, `0` inicial, `+` opcional, sin validar.
+> - Normalización del teléfono: paréntesis, puntos, guiones y vacío → `null`.
+> - Largos máximos (nombre ±1, apellido, email, sexo, dirección, obra social) y recortes.
+> - Obligatoriedad, opcionales vacíos → `null`, y "no frena con errores".
+>
+> **Murieron los 34, ningún sobreviviente**, así que no hizo falta agregar tests. Varios mutantes los detecta un solo test (por ejemplo, DNI de 6 o 9 dígitos, E.164 de 7 o 16 dígitos, `email` sin recortar).
+
 > **Nota de mutación (4.4, 2026-11-24).** Se invirtió temporalmente `puedeDarDeBaja` (`return !(…)`) y se restauró desde el commit (`git diff` vacío). Fallan 12 tests:
 > - Los de RECEPCION: `RECEPCION: "Editar" en cada fila, sin "Dar de baja" ni "Reactivar"` (lista) y `RECEPCION no` (permisos).
 > - Los de ADMIN y PROFESIONAL.
@@ -91,7 +101,7 @@
 
 ## 6a. Escape de contenido — pacientes
 
-- [ ] 6a.1 Tests con `<img src=x onerror=alert(1)>`, `<script>alert(1)</script>` y `"><svg onload=…>`:
+- [x] 6a.1 (`pages/pacientes/xss.test.ts`: 18 casos, 3 payloads × 6 escenarios; más 4 casos en `app.test.ts` con cuerpos de error maliciosos por el cliente HTTP real, 400/409 con y sin `pacienteId`/500. Se verifica además que ningún elemento quede con atributos `on*`) Tests con `<img src=x onerror=alert(1)>`, `<script>alert(1)</script>` y `"><svg onload=…>`:
   - En nombre, apellido, DNI, teléfono, email, dirección y obra social, en la lista, el formulario de edición y el aviso de DNI duplicado.
   - En los mensajes de error del servidor: `title`, `detail` y `errores[].mensaje` con esos textos.
     - El `title` y el `detail` no se muestran.
@@ -101,20 +111,43 @@
 
 ## 7a. Verificación de C-12a
 
-- [ ] 7a.1 `npm test`, `npm run lint`, `npm run typecheck` y `npm run build` limpios; anotar conteos y tamaño del bundle.
-- [ ] 7a.2 `grep` en `frontend/src` fuera de los tests: `innerHTML|outerHTML|insertAdjacentHTML|localStorage|console\.|: any|as any` sin resultados; `sessionStorage` solo en `state/session.ts`.
-- [ ] 7a.3 `git diff main -- backend` vacío; tests de rutas exactas existentes sin cambios (2.3); `grep -rn "/ficha" frontend/src --include=*.ts --exclude=*.test.ts` sin resultados (solo lo mencionan los tests de 3.4 y 4.4).
-- [ ] 7a.3b **Sin esqueletos**: ninguna página de pacientes queda como el esqueleto de 3.3, con solo el `h1`.
+- [x] 7a.1 (681/681 en 32 archivos; lint y typecheck limpios; build: JS 51,01 kB / 16,92 kB gzip, CSS 2,01 kB; `dist/` ignorado por git) `npm test`, `npm run lint`, `npm run typecheck` y `npm run build` limpios; anotar conteos y tamaño del bundle.
+- [x] 7a.2 (sin resultados. `sessionStorage` aparece solo en el código de sesión de C-10: `state/session.ts`, la inyección en `app.ts` y un comentario en `main.ts`; nunca en `pages/`) `grep` en `frontend/src` fuera de los tests: `innerHTML|outerHTML|insertAdjacentHTML|localStorage|console\.|: any|as any` sin resultados; `sessionStorage` solo en `state/session.ts`.
+- [x] 7a.3 (backend vacío; 0 líneas borradas en `router.test.ts`, `routes.test.ts` y `app.test.ts`; `/ficha` sin resultados fuera de los tests) `git diff main -- backend` vacío; tests de rutas exactas existentes sin cambios (2.3); `grep -rn "/ficha" frontend/src --include=*.ts --exclude=*.test.ts` sin resultados (solo lo mencionan los tests de 3.4 y 4.4).
+- [x] 7a.3b (5 casos nuevos en `app.test.ts` + grep sin resultados) **Sin esqueletos**: ninguna página de pacientes queda como el esqueleto de 3.3, con solo el `h1`.
   - Por fuente: ningún "Esqueleto de la tarea 3.3" en `src/pages/pacientes/`.
   - Por test: en `app.test.ts`, con sesión y la API simulada, cada ruta muestra más que el `h1`:
     - `#/pacientes`: formulario de búsqueda y tabla o estado vacío.
     - `#/pacientes/nuevo`: `<form>` con los campos de D9.
     - `#/pacientes/7`: formulario con los datos o "Paciente no encontrado".
-- [ ] 7a.4 Guía de verificación manual de pacientes para la persona (contra la API real, ADMIN y RECEPCION):
-  - ABM y búsqueda con acentos.
-  - DNI duplicado.
-  - Baja y reactivación por rol.
-  - `#/pacientes/1/ficha` → `#/inicio`.
+- [x] 7a.4 Guía de verificación manual de pacientes para la persona. Pendiente de que la persona la ejecute contra la API real, con ADMIN y RECEPCION. Requiere backend y MySQL levantados por la persona y `npm run dev`.
+
+  **Alta**
+  1. Con ADMIN, abrir "Pacientes" en el menú y luego "Nuevo paciente".
+  2. Cargar Ana Pérez, DNI `30.111.222`, teléfono `+54 9 11 2345 6789`. Debe:
+     - ir a `#/pacientes/<id>` con el aviso "Paciente creado.";
+     - mostrar el DNI como `30111222` y el teléfono como `+5491123456789`.
+  3. Validación local, sin request en Network: DNI `123`, teléfono `1123456789`, fecha de nacimiento de mañana. Cada campo muestra su error.
+  4. **DNI duplicado**: otra alta con `30111222`. Debe mostrar el aviso en DNI y "Ver paciente existente", que lleva a Ana.
+
+  **Búsqueda**
+  5. Buscar `perez`, `PÉREZ`, `ana pér` y `30.111`: todos encuentran a Ana. La URL sigue siendo `#/pacientes`, sin el término.
+
+  **Baja y reactivación**
+  6. Dar de baja a Ana: "Cancelar" no hace nada; "Confirmar" la quita de la lista.
+  7. Con "Incluir dados de baja", Ana aparece como "Dado de baja" y con "Reactivar".
+  8. Reactivar desde la lista. Repetir la baja y reactivar desde `#/pacientes/<id>`.
+
+  **URLs inválidas**
+  9. `#/pacientes/abc`, `#/pacientes/-1`, `#/pacientes/1/ficha`: las tres van a `#/inicio`, sin requests a `/api/pacientes` en Network.
+
+  **RECEPCION**
+  10. Crear un usuario RECEPCION como en el handoff de C-11 (registro y `UPDATE usuario SET rol`) y volver a iniciar sesión.
+  11. Ve "Pacientes", busca, crea y edita. No ve "Dar de baja" ni "Reactivar" en la lista, ni "Reactivar" en el detalle de un dado de baja.
+
+  **Datos en el navegador y XSS**
+  12. En DevTools, Application: `localStorage` vacío y `sessionStorage` solo con `global.session.v1`. Console sin mensajes de la app.
+  13. Crear un paciente llamado `<img src=x onerror=alert(1)>`: se ve como texto en la lista y en el detalle, y no aparece ningún `alert`.
 - [ ] 7a.5 **Sin handoff ni `[x]` en CHANGES.md** (van con C-12b). Commit, push y PR solo con autorización de la persona (regla 10), avisando a integrante-1/2 (regla 12). La descripción del PR aclara que C-12 sigue abierto.
 
 ---

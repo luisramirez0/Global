@@ -301,3 +301,60 @@ describe('pacientes: cuerpos de error del servidor con contenido malicioso (C-12
     expect(texto).not.toContain('<b>X</b>');
   });
 });
+
+describe('C-12a sin esqueletos (tasks 7a.3b)', () => {
+  const PACIENTE = {
+    id: 7,
+    nombre: 'Ana',
+    apellido: 'Pérez',
+    dni: '30111222',
+    fechaNacimiento: null,
+    sexo: null,
+    telefono: null,
+    email: null,
+    direccion: null,
+    obraSocialTexto: null,
+    activo: true,
+  };
+
+  async function abrir(hash: string, ...respuestas: Response[]): Promise<HTMLElement> {
+    storeSession();
+    window.history.replaceState(null, '', hash);
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(200, ME_OK));
+    for (const r of respuestas) fetchFn.mockResolvedValueOnce(r);
+    await mount(fetchFn).ready;
+    return main();
+  }
+
+  it('#/pacientes muestra la búsqueda y la tabla, no solo el h1', async () => {
+    const m = await abrir('#/pacientes', jsonResponse(200, { contenido: [PACIENTE], pagina: 0, tamanio: 20, totalElementos: 1, totalPaginas: 1 }));
+    expect(m.querySelector('form[role="search"] input[name="q"]')).not.toBeNull();
+    await vi.waitFor(() => expect(m.querySelector('tbody tr')?.textContent).toContain('Pérez, Ana'));
+  });
+
+  it('#/pacientes/nuevo muestra el formulario con los campos de D9', async () => {
+    const m = await abrir('#/pacientes/nuevo');
+    for (const name of ['nombre', 'apellido', 'dni', 'fechaNacimiento', 'sexo', 'telefono', 'email', 'direccion', 'obraSocialTexto']) {
+      expect(m.querySelector(`form input[name="${name}"]`), name).not.toBeNull();
+    }
+  });
+
+  it('#/pacientes/7 muestra el formulario con los datos', async () => {
+    const m = await abrir('#/pacientes/7', jsonResponse(200, PACIENTE));
+    await vi.waitFor(() => {
+      const apellido = m.querySelector('input[name="apellido"]');
+      expect(apellido instanceof HTMLInputElement && apellido.value).toBe('Pérez');
+    });
+  });
+
+  it('#/pacientes/7 inexistente muestra "Paciente no encontrado"', async () => {
+    const m = await abrir('#/pacientes/7', problemResponse(404, {}));
+    await vi.waitFor(() => expect(m.textContent).toContain('Paciente no encontrado.'));
+  });
+
+  it.each(['#/pacientes', '#/pacientes/nuevo', '#/pacientes/7'])('%s tiene más que el h1', async (hash) => {
+    const m = await abrir(hash, jsonResponse(200, { contenido: [], pagina: 0, tamanio: 20, totalElementos: 0, totalPaginas: 0 }));
+    const section = m.querySelector('section');
+    expect(section?.children.length ?? 0).toBeGreaterThan(1);
+  });
+});
