@@ -59,10 +59,10 @@
 
 ## 4. Pacientes
 
-- [ ] 4.1 (incluye `PageContext.pacientes` en `app.ts` con el mismo `http` y `PacientesMock` en `test-support/pages.ts`, movidos desde 3.3) RED: `api/pacientes.test.ts`: método, ruta, query (`q` codificado, `incluirInactivos`, `page`, `size`), cuerpo y `auth` de las 6 operaciones; `204` en baja y reactivación; id inválido → sin request. GREEN: `api/pacientes.ts`.
-- [ ] 4.2 RED: decodificadores de `Paciente` y `Pagina<T>`: faltantes, `activo` no booleano, `fechaNacimiento` no `YYYY-MM-DD`, `totalPaginas` negativo → `unexpected`. GREEN: `api/decoders.ts`, `api/types.ts`, fixtures en `api/__fixtures__/pacientes.ts`.
-- [ ] 4.3 RED: `pages/pacientes/validacion.test.ts`, ≥ 2 casos por regla de D9 (DNI con puntos y espacios, E.164, email, fecha futura con `hoyEnZona`, largos). GREEN: `validacion.ts` y `mensajes.ts`.
-- [ ] 4.4 RED: `pages/pacientes/lista.test.ts`:
+- [x] 4.1 (40 tests en `api/pacientes.test.ts`; `conId`/`conQuery` extraídos de `agendaConfig.ts` a `api/rutas.ts` sin cambio de comportamiento; `errorOf` de `test-support` ahora lee selects/textareas y el id `…-error` cuando hay `hint`) (incluye `PageContext.pacientes` en `app.ts` con el mismo `http` y `PacientesMock` en `test-support/pages.ts`, movidos desde 3.3) RED: `api/pacientes.test.ts`: método, ruta, query (`q` codificado, `incluirInactivos`, `page`, `size`), cuerpo y `auth` de las 6 operaciones; `204` en baja y reactivación; id inválido → sin request. GREEN: `api/pacientes.ts`.
+- [x] 4.2 (cubiertos en `api/pacientes.test.ts`: 12 casos de paciente y 7 de página) RED: decodificadores de `Paciente` y `Pagina<T>`: faltantes, `activo` no booleano, `fechaNacimiento` no `YYYY-MM-DD`, `totalPaginas` negativo → `unexpected`. GREEN: `api/decoders.ts`, `api/types.ts`, fixtures en `api/__fixtures__/pacientes.ts`.
+- [x] 4.3 (51 tests; separadores del teléfono alineados con `TelefonoE164`: `[\s.()-]`. RED no ejecutado por separado: el módulo no existía) RED: `pages/pacientes/validacion.test.ts`, ≥ 2 casos por regla de D9 (DNI con puntos y espacios, E.164, email, fecha futura con `hoyEnZona`, largos). GREEN: `validacion.ts` y `mensajes.ts`.
+- [x] 4.4 (23 tests; mutación hecha, ver nota) RED: `pages/pacientes/lista.test.ts`:
   - Carga, vacío, error con "Reintentar".
   - Búsqueda al enviar; `q` fuera de la URL.
   - Respuesta vieja descartada.
@@ -72,7 +72,7 @@
   - **Sin enlace "Ficha"** (C-12a): con `ADMIN`, `PROFESIONAL` y `RECEPCION`, ninguna fila tiene un enlace o botón "Ficha" ni un `href` que termine en `/ficha`. C-12b reemplaza este caso (5.9).
 
   GREEN: `pages/pacientes/lista.ts`.
-- [ ] 4.5 RED: `pages/pacientes/formulario.test.ts`:
+- [x] 4.5 (26 tests; un 409 con `codigo` no es DNI duplicado, ver design D11) RED: `pages/pacientes/formulario.test.ts`:
   - Alta y edición con normalización.
   - Errores locales.
   - **Errores del servidor que la validación local deja pasar** (A-D9).
@@ -83,6 +83,11 @@
   - `flash` solo con texto fijo.
 
   GREEN: `pages/pacientes/formulario.ts`.
+
+> **Nota de mutación (4.4, 2026-11-24).** Se invirtió temporalmente `puedeDarDeBaja` (`return !(…)`) y se restauró desde el commit (`git diff` vacío). Fallan 12 tests:
+> - Los de RECEPCION: `RECEPCION: "Editar" en cada fila, sin "Dar de baja" ni "Reactivar"` (lista) y `RECEPCION no` (permisos).
+> - Los de ADMIN y PROFESIONAL.
+> - Los 5 de baja y reactivación.
 
 ## 6a. Escape de contenido — pacientes
 

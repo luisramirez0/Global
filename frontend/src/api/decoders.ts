@@ -6,6 +6,8 @@ import {
   type Horario,
   type LoginResponse,
   type MeResponse,
+  type Paciente,
+  type Pagina,
   type Prestacion,
   type RegistroResponse,
   type Rol,
@@ -147,5 +149,58 @@ export function decodeBloqueo(value: unknown): Bloqueo {
     inicio: instant(o, 'inicio'),
     fin: instant(o, 'fin'),
     motivo: strOrNull(o, 'motivo'),
+  };
+}
+
+/* Pacientes (C-05; C-12). */
+
+/** `LocalDate` de Java (`YYYY-MM-DD`) que existe en el calendario. */
+function fechaOrNull(o: Obj, key: string): string | null {
+  const v = o[key];
+  if (v === null || v === undefined) return null;
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) fail();
+  const [y, m, d] = v.split('-').map(Number);
+  if (y === undefined || m === undefined || d === undefined) fail();
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) fail();
+  return v;
+}
+
+function entero(o: Obj, key: string, min: number): number {
+  const v = o[key];
+  if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < min) fail();
+  return v;
+}
+
+export function decodePaciente(value: unknown): Paciente {
+  const o = obj(value);
+  return {
+    id: id(o, 'id'),
+    nombre: str(o, 'nombre'),
+    apellido: str(o, 'apellido'),
+    dni: str(o, 'dni'),
+    fechaNacimiento: fechaOrNull(o, 'fechaNacimiento'),
+    sexo: strOrNull(o, 'sexo'),
+    telefono: strOrNull(o, 'telefono'),
+    email: strOrNull(o, 'email'),
+    direccion: strOrNull(o, 'direccion'),
+    obraSocialTexto: strOrNull(o, 'obraSocialTexto'),
+    activo: bool(o, 'activo'),
+  };
+}
+
+/** `Pagina<T>` del backend; cada elemento pasa por `decode`. */
+export function paginaOf<T>(decode: (value: unknown) => T): (value: unknown) => Pagina<T> {
+  return (value) => {
+    const o = obj(value);
+    const contenido = o['contenido'];
+    if (!Array.isArray(contenido)) fail();
+    return {
+      contenido: contenido.map((item: unknown) => decode(item)),
+      pagina: entero(o, 'pagina', 0),
+      tamanio: entero(o, 'tamanio', 1),
+      totalElementos: entero(o, 'totalElementos', 0),
+      totalPaginas: entero(o, 'totalPaginas', 0),
+    };
   };
 }

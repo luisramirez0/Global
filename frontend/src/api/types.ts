@@ -106,3 +106,53 @@ export interface FiltroBloqueos {
   desde?: string;
   hasta?: string;
 }
+
+/* Pacientes (C-05; C-12). */
+
+/** Página de resultados de la API (`common.web.Pagina` del backend). */
+export interface Pagina<T> {
+  contenido: T[];
+  pagina: number;
+  tamanio: number;
+  totalElementos: number;
+  totalPaginas: number;
+}
+
+/** Paciente tal como lo devuelve la API: DNI sin separadores y teléfono en E.164 o `null`. */
+export interface Paciente {
+  id: number;
+  nombre: string;
+  apellido: string;
+  dni: string;
+  /** `YYYY-MM-DD` o `null`. */
+  fechaNacimiento: string | null;
+  sexo: string | null;
+  telefono: string | null;
+  email: string | null;
+  direccion: string | null;
+  obraSocialTexto: string | null;
+  activo: boolean;
+}
+
+/** Alta y edición (reemplazo completo de datos personales; no cambia `activo`). */
+export interface PacienteRequest {
+  nombre: string;
+  apellido: string;
+  dni: string;
+  fechaNacimiento: string | null;
+  sexo: string | null;
+  telefono: string | null;
+  email: string | null;
+  direccion: string | null;
+  obraSocialTexto: string | null;
+}
+
+export interface FiltroPacientes {
+  /** Nombre, apellido o prefijo de DNI; vacío = sin filtro. Nunca va en la URL de la app (D1). */
+  q: string;
+  incluirInactivos: boolean;
+  /** Página desde 0. */
+  page: number;
+  /** 1..50 (el backend ajusta; default 20). */
+  size: number;
+}

@@ -132,6 +132,7 @@ Contrato real verificado en el código (`paciente/abm`, `paciente/ficha`, `secur
   - Enlace "Ver paciente existente" → `#/pacientes/<pacienteId>`.
   - En esa pantalla, si el paciente está inactivo y el rol es `GESTION`, se ofrece "Reactivar".
 - Sin `pacienteId`, solo el aviso.
+- **Aclaración de la tarea 4.5 (A-D3)**: el 409 de DNI duplicado de C-05 no trae `codigo`. Un 409 **con** `codigo` (cualquiera) no se trata como DNI duplicado: muestra el mensaje genérico de `conflict` y no marca el campo DNI.
 
 ## Risks / Trade-offs
 
