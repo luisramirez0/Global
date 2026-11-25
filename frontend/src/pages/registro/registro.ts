@@ -1,5 +1,6 @@
 import { ApiError } from '../../api/errors';
 import { applyFieldErrors, createField, createFormStatus, setBusy, type Field } from '../../components/form';
+import { HOME_PATH } from '../../router/paths';
 import type { Page } from '../../router/router';
 import { h } from '../../utils/dom';
 import { messageForError, serverFieldErrors } from '../auth/messages';
@@ -50,7 +51,7 @@ export function renderRegistro(ctx: PageContext): Page {
       const result = await ctx.api.login({ email, password });
       ctx.session.start(result.accessToken, result.expiresIn);
       ctx.session.setProfile(await ctx.api.me());
-      if (!disposed) ctx.navigate('/inicio');
+      if (!disposed) ctx.navigate(HOME_PATH);
     } catch {
       ctx.session.end('logout');
       ctx.flash.set(MSG_ACCOUNT_CREATED);

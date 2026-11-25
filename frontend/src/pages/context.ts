@@ -1,6 +1,8 @@
 import type { AgendaConfigApi } from '../api/agendaConfig';
 import type { AuditoriaApi } from '../api/auditoria';
 import type { AuthApi } from '../api/auth';
+import type { PacientesApi } from '../api/pacientes';
+import type { TurnosApi } from '../api/turnos';
 import type { Session } from '../state/session';
 
 /** Lo que recibe cada página (design D3). C-11..C-15 lo amplían con sus clientes de API. */
@@ -8,6 +10,10 @@ export interface PageContext {
   api: AuthApi;
   /** Configuración de agenda (C-11). */
   agenda: AgendaConfigApi;
+  /** Turnos (C-13, C-07). */
+  turnos: TurnosApi;
+  /** Pacientes (C-05); C-12 lo amplía con alta, edición y baja. */
+  pacientes: PacientesApi;
   /** Log de auditoría y export de pacientes (C-15). */
   auditoria: AuditoriaApi;
   session: Session;

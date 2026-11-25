@@ -107,6 +107,88 @@ export interface FiltroBloqueos {
   hasta?: string;
 }
 
+/** Contrato de turnos de C-07 (knowledge-base/entrega/C-07.md, spec appointment-scheduling). */
+
+export const ESTADOS_TURNO = ['PROGRAMADO', 'CONFIRMADO', 'CANCELADO', 'ASISTIO', 'AUSENTE'] as const;
+export type EstadoTurno = (typeof ESTADOS_TURNO)[number];
+
+export interface Turno {
+  id: number;
+  /** Instantes ISO-8601 UTC. */
+  inicio: string;
+  fin: string;
+  estado: EstadoTurno;
+  sobreturno: boolean;
+  motivoCancelacion: string | null;
+  notas: string | null;
+  sillonId: number;
+  profesionalId: number | null;
+  paciente: { id: number; nombre: string; apellido: string };
+  prestacion: { id: number; nombre: string };
+}
+
+export interface TurnoCreateRequest {
+  pacienteId: number;
+  prestacionId: number;
+  sillonId: number;
+  /** Omitido: el backend usa el único profesional activo. */
+  profesionalId?: number;
+  inicio: string;
+  /** Omitido = falso. */
+  sobreturno?: boolean;
+  notas?: string;
+}
+
+export interface TurnoEstadoRequest {
+  estado: EstadoTurno;
+  /** Solo con `CANCELADO`. */
+  motivoCancelacion?: string;
+}
+
+export interface TurnoReprogramarRequest {
+  inicio: string;
+  /** Omitido: se conserva el sillón. */
+  sillonId?: number;
+  profesionalId?: number;
+  sobreturno?: boolean;
+}
+
+export interface FiltroTurnos {
+  /** Rango `[desde, hasta)` en instantes UTC, máximo 42 días. */
+  desde: string;
+  hasta: string;
+  sillonId?: number;
+  profesionalId?: number;
+  incluirCancelados?: boolean;
+}
+
+/** Detalle de un 409 de turno: solo ids e instantes, nunca datos del otro paciente. */
+export interface ConflictoTurno {
+  turnoId: number;
+  inicio: string;
+  fin: string;
+  sillonId: number;
+  profesionalId: number;
+  motivo: 'SILLON' | 'PROFESIONAL';
+}
+
+/** Contrato de pacientes de C-05 (knowledge-base/entrega/C-05.md). */
+
+export interface Paciente {
+  id: number;
+  nombre: string;
+  apellido: string;
+  dni: string;
+  /** `YYYY-MM-DD` o `null`. */
+  fechaNacimiento: string | null;
+  sexo: string | null;
+  telefono: string | null;
+  email: string | null;
+  direccion: string | null;
+  obraSocialTexto: string | null;
+  activo: boolean;
+}
+
 /** Contrato de `GET /api/auditoria` (knowledge-base/entrega/C-06.md) y del export de C-15. */
 
 export const ACCIONES_AUDITORIA = ['READ', 'CREATE', 'UPDATE', 'DELETE', 'EXPORT', 'LOGIN'] as const;
@@ -133,6 +215,13 @@ export interface Pagina<T> {
   tamanio: number;
   totalElementos: number;
   totalPaginas: number;
+}
+
+export interface FiltroPacientes {
+  q?: string;
+  page?: number;
+  size?: number;
+  incluirInactivos?: boolean;
 }
 
 /**

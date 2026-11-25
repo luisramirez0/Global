@@ -3,11 +3,13 @@ import { createAgendaConfigApi } from './api/agendaConfig';
 import { createAuditoriaApi } from './api/auditoria';
 import { createAuthApi } from './api/auth';
 import { createHttpClient } from './api/http';
+import { createPacientesApi } from './api/pacientes';
+import { createTurnosApi } from './api/turnos';
 import { createLayout } from './components/layout';
 import { messageForError } from './pages/auth/messages';
 import { createFlash, type PageContext } from './pages/context';
 import { createRouter, type Router } from './router/router';
-import { HOME_PATH, LOGIN_PATH, NAV_ITEMS, ROUTES } from './router/routes';
+import { HOME_PATH, LOGIN_PATH, NAV_ITEMS, REDIRECTS, ROUTES } from './router/routes';
 import { createSession } from './state/session';
 import { h } from './utils/dom';
 
@@ -47,6 +49,8 @@ export function mountApp(doc: Document, title: string = DEFAULT_TITLE, deps: Par
   });
   const api = createAuthApi(http);
   const agenda = createAgendaConfigApi(http);
+  const turnos = createTurnosApi(http);
+  const pacientes = createPacientesApi(http);
   const auditoria = createAuditoriaApi(http);
   const flash = createFlash();
 
@@ -54,7 +58,7 @@ export function mountApp(doc: Document, title: string = DEFAULT_TITLE, deps: Par
   root.replaceChildren(layout.root);
 
   let router: Router | null = null;
-  const context: PageContext = { api, agenda, auditoria, session, flash, navigate: (path) => router?.navigate(path) };
+  const context: PageContext = { api, agenda, turnos, pacientes, auditoria, session, flash, navigate: (path) => router?.navigate(path) };
   router = createRouter({
     win,
     outlet: layout.main,
@@ -64,6 +68,7 @@ export function mountApp(doc: Document, title: string = DEFAULT_TITLE, deps: Par
     appName: title,
     homePath: HOME_PATH,
     loginPath: LOGIN_PATH,
+    redirects: REDIRECTS,
   });
   const activeRouter = router;
 

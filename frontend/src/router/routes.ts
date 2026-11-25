@@ -6,22 +6,23 @@ import { CONFIG_HOME } from '../pages/config/nav';
 import { renderPrestaciones } from '../pages/config/prestaciones';
 import { renderSillones } from '../pages/config/sillones';
 import type { PageContext } from '../pages/context';
-import { renderInicio } from '../pages/inicio/inicio';
+import { renderAgenda } from '../pages/agenda/agenda';
 import { renderLogin } from '../pages/login/login';
 import { renderRegistro } from '../pages/registro/registro';
+import { HOME_PATH, LOGIN_PATH } from './paths';
 import type { Route } from './router';
+
+export { HOME_PATH, LOGIN_PATH };
 
 /**
  * Tabla de rutas. Para sumar una pantalla protegida (C-11..C-15): agregar `{ path, render }` acá y, si va en el
  * menú, una entrada en `NAV_ITEMS`. Las rutas son protegidas salvo que declaren `guestOnly`.
  */
-export const HOME_PATH = '/inicio';
-export const LOGIN_PATH = '/login';
-
 export const ROUTES: readonly Route<PageContext>[] = [
   { path: LOGIN_PATH, guestOnly: true, render: renderLogin },
   { path: '/registro', guestOnly: true, render: renderRegistro },
-  { path: HOME_PATH, render: renderInicio },
+  // Agenda de turnos (C-13): es la entrada de la aplicación.
+  { path: HOME_PATH, render: renderAgenda },
   // Configuración de agenda (C-11).
   { path: '/config/sillones', render: renderSillones },
   { path: '/config/prestaciones', render: renderPrestaciones },
@@ -31,8 +32,11 @@ export const ROUTES: readonly Route<PageContext>[] = [
   { path: '/auditoria', render: renderAuditoria },
 ];
 
+/** Redirecciones explícitas de rutas retiradas (marcadores viejos). El router las aplica antes del guard. */
+export const REDIRECTS: ReadonlyMap<string, string> = new Map([['/inicio', HOME_PATH]]);
+
 export const NAV_ITEMS: readonly NavItem[] = [
-  { path: HOME_PATH, label: 'Inicio' },
+  { path: HOME_PATH, label: 'Agenda' },
   { path: CONFIG_HOME, label: 'Configuración' },
   { path: '/auditoria', label: 'Auditoría', roles: ['ADMIN', 'PROFESIONAL'] },
 ];

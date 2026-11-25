@@ -1,4 +1,5 @@
 import { applyFieldErrors, createField, createFormStatus, setBusy } from '../../components/form';
+import { HOME_PATH } from '../../router/paths';
 import type { Page } from '../../router/router';
 import { h } from '../../utils/dom';
 import { messageForError, serverFieldErrors } from '../auth/messages';
@@ -60,7 +61,7 @@ export function renderLogin(ctx: PageContext): Page {
       ctx.session.start(result.accessToken, result.expiresIn);
       stage = 'me';
       ctx.session.setProfile(await ctx.api.me());
-      if (!disposed) ctx.navigate('/inicio');
+      if (!disposed) ctx.navigate(HOME_PATH);
     } catch (error) {
       if (stage === 'me') ctx.session.end('logout');
       if (disposed) return;

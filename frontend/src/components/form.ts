@@ -111,6 +111,37 @@ export function createField(options: FieldOptions): Field {
   };
 }
 
+export interface TextAreaFieldOptions {
+  id: string;
+  name: string;
+  label: string;
+}
+
+export interface TextAreaField extends FormControl {
+  readonly element: HTMLElement;
+  readonly textarea: HTMLTextAreaElement;
+  value(): string;
+  setValue(value: string): void;
+}
+
+/** Texto de varias líneas con el mismo patrón accesible que `createField` (C-13: notas del turno). */
+export function createTextAreaField(options: TextAreaFieldOptions): TextAreaField {
+  const error = h('p', { id: `${options.id}-error`, className: 'error-campo' });
+  const textarea = h('textarea', { id: options.id, attrs: { name: options.name } });
+  const element = h('div', { className: 'campo' }, h('label', { attrs: { for: options.id } }, options.label), textarea, error);
+  return {
+    name: options.name,
+    element,
+    textarea,
+    value: () => textarea.value,
+    setValue(value) {
+      textarea.value = value;
+    },
+    setError: (message) => markError(textarea, error, message),
+    focus: () => textarea.focus(),
+  };
+}
+
 export interface FormStatus {
   readonly element: HTMLElement;
   show(message: string): void;

@@ -75,14 +75,14 @@ describe('validación en el cliente', () => {
 });
 
 describe('éxito', () => {
-  it('registra, inicia sesión, carga el perfil y navega a inicio', async () => {
+  it('registra, inicia sesión, carga el perfil y navega a la agenda', async () => {
     const { root, ctx } = setup();
     ctx.api.register.mockResolvedValue(REGISTRO_OK);
     ctx.api.login.mockResolvedValue(LOGIN_OK);
     ctx.api.me.mockResolvedValue(ME_OK);
     fill(root, { ...DATOS, nombre: '  Ana  ', matricula: ' MN 1234 ' });
     submit(root);
-    await vi.waitFor(() => expect(ctx.navigate).toHaveBeenCalledWith('/inicio'));
+    await vi.waitFor(() => expect(ctx.navigate).toHaveBeenCalledWith('/agenda'));
     expect(ctx.api.register).toHaveBeenCalledWith({ ...DATOS, matricula: 'MN 1234' });
     expect(ctx.api.login).toHaveBeenCalledWith({ email: DATOS.email, password: DATOS.password });
     const order = [ctx.api.register, ctx.api.login, ctx.api.me].map((m) => m.mock.invocationCallOrder[0]);

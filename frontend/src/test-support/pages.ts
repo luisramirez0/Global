@@ -3,12 +3,18 @@ import { vi, type Mock } from 'vitest';
 import type { AgendaConfigApi } from '../api/agendaConfig';
 import type { AuditoriaApi } from '../api/auditoria';
 import type { AuthApi } from '../api/auth';
+import type { PacientesApi } from '../api/pacientes';
+import type { TurnosApi } from '../api/turnos';
 import type { MeResponse, Rol } from '../api/types';
 import { createFlash, type PageContext } from '../pages/context';
 import { createSession } from '../state/session';
 
 /** Cada método de la API de agenda como `vi.fn` tipado (C-11). */
 export type AgendaMock = { [K in keyof AgendaConfigApi]: Mock<AgendaConfigApi[K]> };
+
+/** Cada método de turnos y pacientes como `vi.fn` tipado (C-13). */
+export type TurnosMock = { [K in keyof TurnosApi]: Mock<TurnosApi[K]> };
+export type PacientesMock = { [K in keyof PacientesApi]: Mock<PacientesApi[K]> };
 
 /** Cliente de auditoría y export como `vi.fn` tipado (C-15). */
 export type AuditoriaMock = { [K in keyof AuditoriaApi]: Mock<AuditoriaApi[K]> };
@@ -20,6 +26,8 @@ export interface TestContext extends PageContext {
     me: ReturnType<typeof vi.fn<AuthApi['me']>>;
   };
   agenda: AgendaMock;
+  turnos: TurnosMock;
+  pacientes: PacientesMock;
   auditoria: AuditoriaMock;
   navigate: ReturnType<typeof vi.fn<(path: string) => void>>;
 }
@@ -45,10 +53,26 @@ function createAgendaMock(): AgendaMock {
   };
 }
 
+function createTurnosMock(): TurnosMock {
+  return {
+    listar: vi.fn<TurnosApi['listar']>(),
+    obtener: vi.fn<TurnosApi['obtener']>(),
+    crear: vi.fn<TurnosApi['crear']>(),
+    cambiarEstado: vi.fn<TurnosApi['cambiarEstado']>(),
+    reprogramar: vi.fn<TurnosApi['reprogramar']>(),
+  };
+}
+
+function createPacientesMock(): PacientesMock {
+  return { buscar: vi.fn<PacientesApi['buscar']>(), obtener: vi.fn<PacientesApi['obtener']>() };
+}
+
 export function createTestContext(): TestContext {
   return {
     api: { register: vi.fn<AuthApi['register']>(), login: vi.fn<AuthApi['login']>(), me: vi.fn<AuthApi['me']>() },
     agenda: createAgendaMock(),
+    turnos: createTurnosMock(),
+    pacientes: createPacientesMock(),
     auditoria: { listar: vi.fn<AuditoriaApi['listar']>(), exportarPaciente: vi.fn<AuditoriaApi['exportarPaciente']>() },
     session: createSession({ storage: sessionStorage, now: () => Date.now() }),
     navigate: vi.fn<(path: string) => void>(),

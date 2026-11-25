@@ -1,4 +1,6 @@
 /** Errores tipados de la API (design D1). El mensaje es fijo por tipo: nunca el detail del servidor ni datos del cliente. */
+import { esInstanteIso } from './instante';
+import type { ConflictoTurno } from './types';
 
 export type ApiErrorKind =
   | 'validation'
@@ -33,6 +35,10 @@ export interface ApiErrorDetails {
   title?: string | null;
   fieldErrors?: readonly FieldError[];
   retryAfterSeconds?: number | null;
+  /** Detalle de un 409 de turno (C-13, D2). */
+  conflicto?: ConflictoTurno | null;
+  /** Id del bloqueo de un 422 de turno (C-13, D2). */
+  bloqueoId?: number | null;
 }
 
 export class ApiError extends Error {
@@ -42,6 +48,10 @@ export class ApiError extends Error {
   readonly title: string | null;
   readonly fieldErrors: readonly FieldError[];
   readonly retryAfterSeconds: number | null;
+  /** Solo ids e instantes del turno que choca; `null` si el 409 no lo trae o viene mal formado. */
+  readonly conflicto: ConflictoTurno | null;
+  /** Bloqueo que causó un 422; `null` si no viene o es inválido. */
+  readonly bloqueoId: number | null;
 
   constructor(kind: ApiErrorKind, details: ApiErrorDetails = {}) {
     super(MESSAGES[kind]);
@@ -51,6 +61,8 @@ export class ApiError extends Error {
     this.title = details.title ?? null;
     this.fieldErrors = details.fieldErrors ?? [];
     this.retryAfterSeconds = details.retryAfterSeconds ?? null;
+    this.conflicto = details.conflicto ?? null;
+    this.bloqueoId = details.bloqueoId ?? null;
   }
 }
 
@@ -81,6 +93,26 @@ function parseFieldErrors(body: unknown): FieldError[] {
   return result;
 }
 
+function entero(value: unknown): number | null {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+/** Decodificador tolerante: cualquier desvío da `null` sin afectar el `kind` (C-13, D2). */
+function parseConflicto(body: unknown): ConflictoTurno | null {
+  if (!isRecord(body) || !isRecord(body['conflicto'])) return null;
+  const c = body['conflicto'];
+  const turnoId = entero(c['turnoId']);
+  const sillonId = entero(c['sillonId']);
+  const profesionalId = entero(c['profesionalId']);
+  const motivo = c['motivo'];
+  const inicio = c['inicio'];
+  const fin = c['fin'];
+  if (turnoId === null || sillonId === null || profesionalId === null) return null;
+  if (motivo !== 'SILLON' && motivo !== 'PROFESIONAL') return null;
+  if (!esInstanteIso(inicio) || !esInstanteIso(fin)) return null;
+  return { turnoId, inicio, fin, sillonId, profesionalId, motivo };
+}
+
 function parseRetryAfter(headers: Headers): number | null {
   const raw = headers.get('Retry-After');
   if (raw === null || !/^\d+$/.test(raw.trim())) {
@@ -97,5 +129,7 @@ export function toApiError(status: number, headers: Headers, body: unknown): Api
     title: isRecord(body) && typeof body['title'] === 'string' ? body['title'] : null,
     fieldErrors: kind === 'validation' ? parseFieldErrors(body) : [],
     retryAfterSeconds: kind === 'rate_limited' ? parseRetryAfter(headers) : null,
+    conflicto: status === 409 ? parseConflicto(body) : null,
+    bloqueoId: status === 422 && isRecord(body) ? entero(body['bloqueoId']) : null,
   });
 }

@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ME_OK } from '../api/__fixtures__/auth';
+import { NAV_ITEMS } from '../router/routes';
 import { createLayout } from './layout';
 
 const MALICIOSO = '<img src=x onerror=alert(1)>';
 
 function setup() {
   const onLogout = vi.fn();
-  const layout = createLayout({ appName: 'Global', navItems: [{ path: '/inicio', label: 'Inicio' }], onLogout });
+  const layout = createLayout({ appName: 'Global', navItems: NAV_ITEMS, onLogout });
   document.body.replaceChildren(layout.root);
   return { layout, onLogout };
 }
@@ -35,7 +36,25 @@ describe('layout', () => {
     expect(button?.textContent).toBe('Cerrar sesión');
     const nav = layout.root.querySelector('nav');
     expect(nav?.getAttribute('aria-label')).toBe('Principal');
-    expect(nav?.querySelector('a')?.getAttribute('href')).toBe('#/inicio');
+    expect(nav?.querySelector('a')?.getAttribute('href')).toBe('#/agenda');
+  });
+
+  const BASE = [
+    ['Agenda', '#/agenda'],
+    ['Configuración', '#/config/sillones'],
+  ];
+  const CON_AUDITORIA = [...BASE, ['Auditoría', '#/auditoria']];
+
+  it.each([
+    ['ADMIN', CON_AUDITORIA],
+    ['PROFESIONAL', CON_AUDITORIA],
+    ['RECEPCION', BASE],
+  ] as const)('el menú de %s es Agenda y Configuración (y Auditoría según C-15), sin Inicio', (rol, esperados) => {
+    const { layout } = setup();
+    layout.update({ ...ME_OK, usuario: { ...ME_OK.usuario, rol } });
+    const enlaces = [...layout.root.querySelectorAll('nav a')].map((a) => [a.textContent, a.getAttribute('href')]);
+    expect(enlaces).toEqual(esperados);
+    expect(layout.root.querySelector('nav')?.textContent).not.toContain('Inicio');
   });
 
   it('muestra nombres maliciosos como texto literal', () => {

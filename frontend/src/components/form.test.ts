@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyFieldErrors, createField, createSelectField } from './form';
+import { applyFieldErrors, createField, createSelectField, createTextAreaField } from './form';
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -74,5 +74,30 @@ describe('applyFieldErrors con controles mixtos', () => {
     applyFieldErrors([dia, nombre], { nombre: 'mal' });
     expect(document.activeElement).toBe(nombre.input);
     expect(dia.select.hasAttribute('aria-invalid')).toBe(false);
+  });
+});
+
+describe('createTextAreaField', () => {
+  it('label asociado, valor editable y error enlazado con aria-describedby', () => {
+    const f = createTextAreaField({ id: 'notas', name: 'notas', label: 'Notas' });
+    document.body.append(f.element);
+    expect(document.querySelector('label[for="notas"]')?.textContent).toBe('Notas');
+    expect(f.textarea.tagName).toBe('TEXTAREA');
+    f.setValue('Control <b>anual</b>');
+    expect(f.value()).toBe('Control <b>anual</b>');
+    expect(document.querySelector('b')).toBeNull();
+    f.setError('Máximo 1000 caracteres.');
+    expect(f.textarea.getAttribute('aria-invalid')).toBe('true');
+    expect(document.getElementById(f.textarea.getAttribute('aria-describedby') ?? '')?.textContent).toBe('Máximo 1000 caracteres.');
+    f.setError(null);
+    expect(f.textarea.hasAttribute('aria-invalid')).toBe(false);
+    expect(f.textarea.hasAttribute('aria-describedby')).toBe(false);
+  });
+
+  it('focus() enfoca el textarea y participa de applyFieldErrors', () => {
+    const f = createTextAreaField({ id: 'n2', name: 'notas', label: 'Notas' });
+    document.body.append(f.element);
+    applyFieldErrors([f], { notas: 'Demasiado larga' });
+    expect(document.activeElement).toBe(f.textarea);
   });
 });

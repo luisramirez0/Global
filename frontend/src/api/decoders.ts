@@ -1,21 +1,26 @@
 import { ApiError } from './errors';
+import { esInstanteIso } from './instante';
 import {
   ACCIONES_AUDITORIA,
+  ESTADOS_TURNO,
   ROLES,
   type AccionAuditoria,
   type Bloqueo,
   type DiaSemana,
   type EntradaAuditoria,
+  type EstadoTurno,
   type ExportPaciente,
-  type Pagina,
-  type ValorDetalle,
   type Horario,
   type LoginResponse,
   type MeResponse,
+  type Paciente,
+  type Pagina,
   type Prestacion,
   type RegistroResponse,
   type Rol,
   type Sillon,
+  type Turno,
+  type ValorDetalle,
 } from './types';
 
 /** Decodificadores de respuestas: narrowing de `unknown`, sin `as` sobre JSON crudo (regla 4). */
@@ -104,8 +109,8 @@ function hhmm(o: Obj, key: string): string {
 
 /** Instant de Java (ISO-8601 con zona): nunca una fecha local ambigua. */
 function instant(o: Obj, key: string): string {
-  const v = str(o, key);
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/.test(v) || Number.isNaN(Date.parse(v))) fail();
+  const v = o[key];
+  if (!esInstanteIso(v)) fail();
   return v;
 }
 
@@ -156,13 +161,66 @@ export function decodeBloqueo(value: unknown): Bloqueo {
   };
 }
 
-/* Auditoría (C-06) y export (C-15). */
+/* Turnos (C-07). */
 
+function estadoTurno(o: Obj, key: string): EstadoTurno {
+  const found = ESTADOS_TURNO.find((e) => e === o[key]);
+  if (found === undefined) fail();
+  return found;
+}
+
+export function decodeTurno(value: unknown): Turno {
+  const o = obj(value);
+  const paciente = obj(o['paciente']);
+  const prestacion = obj(o['prestacion']);
+  return {
+    id: id(o, 'id'),
+    inicio: instant(o, 'inicio'),
+    fin: instant(o, 'fin'),
+    estado: estadoTurno(o, 'estado'),
+    sobreturno: bool(o, 'sobreturno'),
+    motivoCancelacion: strOrNull(o, 'motivoCancelacion'),
+    notas: strOrNull(o, 'notas'),
+    sillonId: id(o, 'sillonId'),
+    profesionalId: idOrNull(o, 'profesionalId'),
+    paciente: { id: id(paciente, 'id'), nombre: str(paciente, 'nombre'), apellido: str(paciente, 'apellido') },
+    prestacion: { id: id(prestacion, 'id'), nombre: str(prestacion, 'nombre') },
+  };
+}
+
+/* Pacientes (C-05). */
+
+function fechaOrNull(o: Obj, key: string): string | null {
+  const v = strOrNull(o, key);
+  if (v !== null && !/^\d{4}-\d{2}-\d{2}$/.test(v)) fail();
+  return v;
+}
+
+/** Entero seguro y no negativo (paginación, conteos). */
 function nonNegativeInt(o: Obj, key: string): number {
   const v = o[key];
   if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < 0) fail();
   return v;
 }
+
+export function decodePaciente(value: unknown): Paciente {
+  const o = obj(value);
+  return {
+    id: id(o, 'id'),
+    nombre: str(o, 'nombre'),
+    apellido: str(o, 'apellido'),
+    dni: str(o, 'dni'),
+    fechaNacimiento: fechaOrNull(o, 'fechaNacimiento'),
+    sexo: strOrNull(o, 'sexo'),
+    telefono: strOrNull(o, 'telefono'),
+    email: strOrNull(o, 'email'),
+    direccion: strOrNull(o, 'direccion'),
+    obraSocialTexto: strOrNull(o, 'obraSocialTexto'),
+    activo: bool(o, 'activo'),
+  };
+}
+
+/* Auditoría (C-06) y export (C-15). */
 
 function accionAuditoria(o: Obj, key: string): AccionAuditoria {
   const v = o[key];
@@ -198,6 +256,7 @@ export function decodeEntradaAuditoria(value: unknown): EntradaAuditoria {
   };
 }
 
+/** Página del backend (`common/web/Pagina`): `{contenido, pagina, tamanio, totalElementos, totalPaginas}`. */
 export function paginaOf<T>(decode: (value: unknown) => T): (value: unknown) => Pagina<T> {
   return (value) => {
     const o = obj(value);

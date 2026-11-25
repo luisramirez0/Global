@@ -73,3 +73,70 @@ describe('ApiError sin respuesta', () => {
     expect(err.message.length).toBeGreaterThan(0);
   });
 });
+
+describe('detalle de conflicto en errores (C-13, D2)', () => {
+  const conflictoSillon = {
+    turnoId: 9,
+    inicio: '2026-11-24T13:00:00Z',
+    fin: '2026-11-24T13:30:00Z',
+    sillonId: 1,
+    profesionalId: 1,
+    motivo: 'SILLON',
+  };
+
+  it('409 con conflicto válido por SILLON: lo decodifica y mantiene el mensaje fijo de conflict', () => {
+    const err = toApiError(409, noHeaders, { title: 'Turno en conflicto', detail: 'x', conflicto: conflictoSillon });
+    expect(err.kind).toBe('conflict');
+    expect(err.conflicto).toEqual(conflictoSillon);
+    expect(err.message).toBe(toApiError(409, noHeaders, undefined).message);
+  });
+
+  it('409 con conflicto válido por PROFESIONAL', () => {
+    const err = toApiError(409, noHeaders, { conflicto: { ...conflictoSillon, turnoId: 12, motivo: 'PROFESIONAL', inicio: '2026-11-24T14:00:00+00:00' } });
+    expect(err.conflicto?.motivo).toBe('PROFESIONAL');
+    expect(err.conflicto?.turnoId).toBe(12);
+  });
+
+  it('409 sin detalle o con título solamente: conflicto null', () => {
+    expect(toApiError(409, noHeaders, { title: 'Modificación concurrente' }).conflicto).toBeNull();
+    expect(toApiError(409, noHeaders, undefined).conflicto).toBeNull();
+  });
+
+  it.each([
+    ['id no entero', { ...conflictoSillon, turnoId: 'x' }],
+    ['id fraccionario', { ...conflictoSillon, sillonId: 1.5 }],
+    ['motivo desconocido', { ...conflictoSillon, motivo: 'OTRO' }],
+    ['instante no ISO', { ...conflictoSillon, inicio: 'mañana' }],
+    ['fin ausente', { ...conflictoSillon, fin: undefined }],
+    ['no es objeto', 'SILLON'],
+  ])('conflicto mal formado (%s): null sin cambiar kind', (_caso, conflicto) => {
+    const err = toApiError(409, noHeaders, { conflicto });
+    expect(err.kind).toBe('conflict');
+    expect(err.conflicto).toBeNull();
+  });
+
+  it('el conflicto solo se lee en un 409', () => {
+    expect(toApiError(422, noHeaders, { conflicto: conflictoSillon }).conflicto).toBeNull();
+  });
+
+  it('422 con bloqueoId entero positivo lo expone junto a los errores por campo', () => {
+    const err = toApiError(422, noHeaders, { errores: [{ campo: 'inicio', mensaje: 'dentro de un bloqueo' }], bloqueoId: 4 });
+    expect(err.kind).toBe('validation');
+    expect(err.bloqueoId).toBe(4);
+    expect(err.fieldErrors.map((f) => f.campo)).toEqual(['inicio']);
+  });
+
+  it.each([['4'], [0], [-2], [1.5], [null]])('bloqueoId %j inválido: null', (bloqueoId) => {
+    expect(toApiError(422, noHeaders, { bloqueoId }).bloqueoId).toBeNull();
+  });
+
+  it('bloqueoId solo se lee en un 422', () => {
+    expect(toApiError(400, noHeaders, { bloqueoId: 4 }).bloqueoId).toBeNull();
+  });
+
+  it('un ApiError construido a mano arranca con ambos detalles en null', () => {
+    const err = new ApiError('conflict', { status: 409 });
+    expect(err.conflicto).toBeNull();
+    expect(err.bloqueoId).toBeNull();
+  });
+});
