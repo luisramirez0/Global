@@ -3,6 +3,10 @@
  * El servidor sigue siendo la autoridad: sus 400 se muestran por campo igual.
  */
 
+import { utf8Length } from '../../utils/texto';
+
+export { utf8Length };
+
 export type FieldErrors<K extends string> = Partial<Record<K, string>>;
 
 export interface LoginInput {
@@ -28,10 +32,6 @@ const maxMsg = (max: number): string => `Máximo ${max} caracteres.`;
 /** Equivalente laxo a `@Email` de Hibernate Validator: algo@algo, sin espacios. */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 const PASSWORD_MAX_BYTES = 72; // límite de BCrypt (MaxUtf8Bytes en el backend)
-
-export function utf8Length(value: string): number {
-  return new TextEncoder().encode(value).length;
-}
 
 function requiredText(value: string, max: number): string | undefined {
   const trimmed = value.trim();

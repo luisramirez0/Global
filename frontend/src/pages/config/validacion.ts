@@ -3,14 +3,11 @@
  * SillonRequest, PrestacionRequest, HorarioRequest, BloqueoRequest. El servidor sigue siendo la autoridad.
  */
 import type { DiaSemana, FiltroBloqueos } from '../../api/types';
+import { GRILLA_MINUTOS } from '../../utils/grilla';
 import { aInstanteUtc, minutosDelDia, siguienteDia } from '../../utils/zonaHoraria';
 import { MSG_REQUIRED, utf8Length } from '../auth/validation';
 
-/**
- * Grilla de la agenda en minutos. Debe coincidir con `GrillaAgenda.MINUTOS` del backend.
- * Provisional (SU-03), pendiente de validar con un odontólogo (PA-03): si cambia, editar ambas constantes.
- */
-export const GRILLA_MINUTOS = 15;
+export { GRILLA_MINUTOS };
 
 const INT_MAX = 2_147_483_647; // `Integer` de Java
 const MOTIVO_MAX_BYTES = 255;
