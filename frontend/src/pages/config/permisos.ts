@@ -3,7 +3,6 @@
  * muestra: el backend sigue autorizando cada request (un 403 se informa con un mensaje fijo).
  */
 import type { Rol } from '../../api/types';
-import type { PageContext } from '../context';
 
 /** Alta, edición y baja de sillones, prestaciones y horarios. */
 export function puedeGestionar(rol: Rol | null): boolean {
@@ -20,6 +19,5 @@ export function puedeBorrarBloqueo(rol: Rol | null): boolean {
   return puedeGestionar(rol);
 }
 
-export function rolActual(ctx: PageContext): Rol | null {
-  return ctx.session.profile()?.usuario.rol ?? null;
-}
+/** Movida a `pages/permisos.ts` en C-12; se re-exporta para no tocar las pantallas de C-11. */
+export { rolActual } from '../permisos';

@@ -1,0 +1,243 @@
+# Design
+
+## Context
+
+C-05 expone `/api/pacientes` (handoff `knowledge-base/entrega/C-05.md`, spec `patient-management`). C-08 expone consentimiento, ficha y notas (handoff `knowledge-base/entrega/C-08.md`, spec `clinical-record`), con auditoría de C-06. C-10 dejó el cliente HTTP, la sesión, el router por hash, el layout, `h()` y el lint anti-XSS. C-11 dejó `crudPage`, `createSelectField` y `createLoggedContext(rol)`. C-12 agrega solo frontend.
+
+Las decisiones D1–D11 fueron aprobadas por la persona (Integrante 5, responsable de C-12, confirmado por ella el 2026-11-24) el 2026-11-24, con los ajustes que se marcan **A-…** en cada decisión.
+
+Contrato real verificado en el código (`paciente/abm`, `paciente/ficha`, `security/Permisos`, `common/web/ApiExceptionHandler`):
+
+- **Pacientes**:
+  - Buscar, ver, crear y editar: `OPERACION` (los tres roles).
+  - `DELETE` y `POST /reactivar`: `GESTION` (`ADMIN`/`PROFESIONAL`).
+  - `GET ?q&incluirInactivos&page&size` (tamaño 20, máximo 50) → `Pagina{contenido, pagina, tamanio, totalElementos, totalPaginas}`.
+  - DNI duplicado → `409` con `pacienteId`.
+- **Ficha**:
+  - Todo es `GESTION`, incluido `texto-vigente`; `RECEPCION` recibe `403`.
+  - Orden de chequeos: `404` → `409 PACIENTE_INACTIVO` (solo escritura y consentimiento) → `409 CONSENTIMIENTO_REQUERIDO` (ficha y notas, lectura y escritura).
+  - `PUT /ficha` es un reemplazo completo con `version` y responde `409 FICHA_DESACTUALIZADA`.
+  - `POST /notas` → `422 PROFESIONAL_NO_VINCULADO`.
+  - Límites: 4000 caracteres por campo de la ficha y 10000 por nota; página de notas 20 (máximo 100).
+  - El código viaja en la propiedad `codigo` del `ProblemDetail`.
+
+## Decisions
+
+### D1 — Rutas con parámetro
+- `Route.path` admite segmentos `:nombre` (por ejemplo `/pacientes/:id/ficha`). Un parámetro **solo** coincide con un entero positivo en decimal sin ceros a la izquierda (`^[1-9][0-9]*$`) y ≤ `Number.MAX_SAFE_INTEGER`. `render(context, params)` recibe `params` como `Readonly<Record<string, number>>`. Las rutas sin parámetros siguen llamando a `render(context)`, así que las firmas existentes no cambian.
+- Resolución:
+  1. Primero, coincidencia exacta.
+  2. Después, los patrones en el orden de `ROUTES`. `/pacientes/nuevo` es exacta y gana; además, `nuevo` no coincide con `:id`.
+  3. Si no coincide nada, se aplica la regla existente de ruta desconocida: redirige a `#/inicio` con `replaceState` y no renderiza la página pedida.
+- **A-D1**:
+  - Los tests actuales de rutas exactas (`router.test.ts`, `routes.test.ts`, `app.test.ts`) siguen pasando **sin modificarse**.
+  - Rutas como `/pacientes/abc`, `/pacientes/-1`, `/pacientes/0`, `/pacientes/01`, `/pacientes/1.5` y `/pacientes/9007199254740993` caen en "no encontrado" (ruta desconocida) **sin hacer ninguna request** de la página. Lo verifica un test con el `fetch` simulado: no recibe nada además del `me()` del arranque de la app (C-10).
+  - "No encontrado" a nivel de router significa ruta desconocida → `#/inicio`, igual que `#/no-existe` (spec `frontend-shell`).
+  - Un id **válido** que la API responde con `404` muestra "Paciente no encontrado" dentro de la página.
+- Cambiar de `/pacientes/1` a `/pacientes/2` (o, desde C-12b, de `/pacientes/1/ficha` a `/pacientes/2/ficha`) vuelve a renderizar: el path completo es distinto y se llama al `dispose` anterior.
+- En la URL solo viajan ids. Nunca nombre, DNI ni texto clínico, tampoco en la búsqueda: el término `q` vive solo en memoria de la página.
+- Rutas: `/pacientes` (lista), `/pacientes/nuevo`, `/pacientes/:id` (detalle y edición) y `/pacientes/:id/ficha`. Todas protegidas. `NAV_ITEMS` gana "Pacientes" → `#/pacientes`. La ruta de ficha se registra recién en C-12b (§Partición).
+
+### D2 — Permisos en la UI
+- `puedeDarDeBaja(rol)` (C-12a) y `puedeVerFicha(rol)` (C-12b) = `ADMIN | PROFESIONAL`. Sin perfil → sin permisos. Se reutiliza `rolActual(ctx)`, que pasa de `pages/config/permisos.ts` a `pages/permisos.ts` con un re-export para no tocar C-11.
+- `RECEPCION`:
+  - En la lista no se crean los botones "Dar de baja" ni "Reactivar" ni el enlace "Ficha" (este último no existe para ningún rol en C-12a).
+  - En `#/pacientes/:id/ficha` (C-12b) se renderiza solo un `h1` y un aviso "Sin permiso para ver la historia clínica". No se llama a **ninguna** API: ni paciente, ni consentimientos, ni ficha.
+- El backend sigue autorizando: un `403` se muestra con un mensaje fijo.
+
+### D3 — `ApiError` con código
+- `ApiError` gana `codigo: string | null` y `pacienteId: number | null`, ambos de solo lectura.
+  - `codigo` se toma de `body.codigo` solo si es string y cumple `^[A-Z][A-Z_]{0,39}$`; si no, `null`.
+  - `pacienteId` se toma solo en `409` y si es entero positivo.
+  - No cambia `kind`, el `message` fijo ni `fieldErrors`: el `422 PROFESIONAL_NO_VINCULADO` sigue siendo `validation`.
+- Las pantallas mapean el código a un mensaje fijo propio (`pages/ficha/mensajes.ts`).
+- **A-D3**: un `codigo` desconocido, o uno conocido en un contexto inesperado, muestra el mensaje genérico fijo del `kind` (`messageForError`). Nunca se muestran el `codigo` crudo, el `title` ni el `detail`.
+
+### D4 — Consentimiento previo y bloqueo visual
+- Al abrir la ficha:
+  1. `GET /api/pacientes/{id}` para el encabezado (nombre, DNI y estado activo).
+  2. `GET /consentimientos`.
+  3. Si la lista está vacía, `GET /api/consentimientos/texto-vigente`.
+- Sin consentimiento:
+  - Se muestra el texto (`textContent`, `white-space: pre-line`) con su versión.
+  - Debajo, una **casilla obligatoria** "El paciente leyó y aceptó el texto de consentimiento (versión X)" y el botón "Registrar consentimiento". El botón queda deshabilitado hasta marcar la casilla, y además se valida al enviar.
+  - El `POST` envía `{versionTexto}` con la `version` **recibida del servidor**; nunca un valor tipeado.
+- **Bloqueo**: mientras no haya consentimiento, las secciones de anamnesis y notas **no existen en el DOM**; no alcanza con deshabilitarlas. Tampoco se piden `GET /ficha` ni `GET /notas`, para no generar `409` ni lecturas auditadas inútiles.
+- Con consentimiento, ya existente o recién registrado:
+  - Se muestra "Consentimiento registrado el <fecha> (versión X)" con el más reciente.
+  - Después se cargan ficha y notas.
+- Si cualquier llamada responde `409 CONSENTIMIENTO_REQUERIDO` (por ejemplo, una carrera), la página vuelve al estado bloqueado y descarta los datos clínicos ya mostrados.
+- Un `400` al registrar (versión no vigente) muestra "El texto de consentimiento cambió; recargá" y vuelve a pedir el texto vigente.
+
+### D5 — Anamnesis y versión
+- Campos:
+  - Textareas (máximo 4000 cada uno): `alergias`, `medicacionActual`, `antecedentesMedicos`, `enfermedadesRelevantes`, `motivoConsulta` y `observaciones`.
+  - Select de tres estados para `embarazo`: "Sin dato" (`null`), "Sí" (`true`) y "No" (`false`).
+- La `version` recibida se guarda en memoria y se reenvía en el `PUT`: `null` si la ficha no estaba cargada. Un campo en blanco se envía como `null` (reemplazo completo). Si el `PUT` sale bien, se reemplazan el formulario y la `version` con la respuesta.
+- **A-D5** (`409 FICHA_DESACTUALIZADA`):
+  - Aviso fijo: "Otra persona modificó la ficha. Tus cambios no se guardaron."
+  - **Lo escrito se conserva** en el formulario y no se toca la `version`.
+  - Se ofrece "Cargar la versión actual". Recién con esa acción se hace `GET /ficha`, que reemplaza el formulario y la `version`; antes, una confirmación avisa que se pierde lo escrito.
+  - No hay reintento automático ni se fusionan cambios.
+- **A-D5b, texto de más** (pedido por la persona, 2026-11-25): las áreas de texto clínicas (anamnesis y notas) **no llevan `maxlength`**, porque el navegador cortaría en silencio un texto pegado.
+  - Apenas el texto supera el máximo (4000 o 10000), se muestra el error "Máximo N caracteres (hay M)." y el texto se conserva completo.
+  - No se puede guardar hasta que se recorte; la validación al enviar usa el mismo mensaje.
+  - Va con `createTextAreaField({ avisarExceso: true })`.
+  - jsdom no reproduce el corte que hace el navegador al pegar: los tests verifican la ausencia del atributo y el aviso. El corte real conviene verificarlo a mano.
+- **Salida de la página (D8)**: `dispose` vacía el cuerpo y el encabezado y libera la anamnesis. Hay tests que verifican que no queda en la página nada de lo escrito tras un 409, ni la ficha ni el paciente, y que una recarga pendiente no vuelve a pintar datos. JavaScript no permite verificar que el recolector de basura libere la memoria: lo que se prueba es que la página no conserva referencias visibles.
+### D6 — Paciente dado de baja
+- Ficha, consentimientos y notas se ven **en solo lectura**, con el aviso "Paciente dado de baja: la historia clínica es de solo lectura".
+  - No se crean el formulario de anamnesis, el de nota ni el registro de consentimiento.
+  - Sin consentimiento previo, se ve "Sin consentimiento registrado" y nada más.
+- `409 PACIENTE_INACTIVO` en una escritura (baja concurrente) cambia la página a ese modo.
+  - **Precisión de la tarea 5.6**: el cambio usa lo que ya está en memoria (la última ficha confirmada por el servidor y las notas cargadas), sin volver a pedirlo (D8).
+  - **A-D6 (pedido por la persona, 2026-11-25, reemplaza la regla anterior que lo descartaba)**: lo escrito sin guardar **no se descarta**. Queda visible en solo lectura, como texto, con el aviso "No se pudo guardar: el paciente fue dado de baja.".
+    - En la anamnesis se muestran solo los campos que difieren de la última ficha del servidor (un campo vaciado aparece como "Sin dato").
+    - En las notas se muestra el texto de "Nueva nota" como "Nota sin guardar:".
+    - Vale para las dos secciones, venga el 409 de una o de la otra.
+    - Sin nada escrito, no aparece el aviso.
+  - Leer sigue permitido: "Ver más" funciona en solo lectura.
+  - Si el 409 llega al registrar el consentimiento, se muestra el aviso y "Sin consentimiento registrado.".
+
+### D7 — Notas
+- Lista paginada (20) del más reciente al más antiguo. "Ver más" pide la página siguiente y la agrega al final. Cada página nueva genera su propia lectura auditada; es esperado.
+- Formulario "Nueva nota": textarea obligatoria (máximo 10000), sin `turnoId` (lo hará C-13). Al crearla, se antepone a la lista.
+- No hay editar ni borrar (PA-08). La UI aclara: "Las notas no se pueden editar; para corregir, agregá una nota nueva."
+- `422 PROFESIONAL_NO_VINCULADO` → "Tu usuario no está vinculado a un profesional activo; no se puede firmar la nota." Se conserva lo escrito.
+- Autor: **"Profesional #<profesionalId>"**. **A-D7**: queda como **deuda** hasta que exista un endpoint con nombres de profesionales (también lo pide C-11). Se anota en el handoff.
+
+### D8 — Higiene de datos clínicos en el navegador
+- Los datos clínicos y personales viven solo en variables de la página. `dispose` limpia las referencias, vacía el contenedor e ignora las respuestas que llegan tarde (mismo criterio que C-10/C-11: se ignoran, no se abortan).
+- Nunca se escriben en `localStorage`, `sessionStorage`, `console`, la URL, `document.title` (el título es fijo: "Pacientes", "Paciente", "Ficha clínica") ni `flash`. `flash` solo lleva textos fijos, como "Paciente creado".
+- Sin caché entre visitas: cada apertura de la ficha vuelve a leer, y esa lectura se audita según RN-DS-02. No se re-pide nada en un re-render interno.
+- Mensajes de error fijos por contexto; nunca `title` ni `detail` del servidor.
+- Lint existente (C-10): prohíbe `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `DOMParser`, `localStorage` y `console` en `src/` no test. Se suma un test que recorre `src/pages/{pacientes,ficha}` y falla si aparece `sessionStorage`, porque el lint lo permite en `state/session.ts`.
+
+### D9 — Formularios y validación
+- `components/form.ts` (aditivo):
+  - `createTextAreaField` (`FormControl` con label, error accesible `aria-describedby`/`aria-invalid` y `maxLength`).
+  - `FieldOptions.maxLength`.
+  - **Agregados en la tarea 3.1** (no estaban en el plan original; los necesita el teléfono de D9):
+    - `FieldOptions.type: 'tel'`.
+    - `FieldOptions.hint`: ayuda visible como texto, en un `<p id="<id>-hint">`, siempre presente en `aria-describedby`. Al marcar un error queda `"<id>-hint <id>-error"`; al limpiarlo, solo la ayuda. Sin `hint`, el campo se comporta exactamente como en C-10.
+    - Tests propios en `components/form.test.ts`:
+      - `type 'tel'`: tipo, `autocomplete` e `inputmode` opcional.
+      - `hint`: texto y `aria-describedby`; combinación con el error; ayuda maliciosa como texto literal.
+      - Sin `hint`: ni párrafo de ayuda ni `aria-describedby`.
+  - Login, registro y C-11 no cambian.
+- Validación local (`pages/pacientes/validacion.ts` y `pages/ficha/validacion.ts`):
+  - Nombre y apellido obligatorios (máximo 100).
+  - DNI de 7–8 dígitos tras quitar puntos, espacios y guiones.
+  - Teléfono opcional en E.164 (`+` y 8–15 dígitos tras quitar espacios y guiones), con la ayuda "Ej.: +54 9 11 2345 6789".
+  - Email con formato básico (máximo 254).
+  - Fecha de nacimiento no futura (hoy en zona AR con `hoyEnZona`).
+  - Largos: sexo 20, dirección 255, obra social 150, campos de ficha 4000, nota 1–10000. La nota en blanco se rechaza.
+- **A-D9**: **el backend es la fuente de verdad.** La validación local solo evita viajes obvios. Si pasa y el servidor responde `400`/`422` con `errores[{campo}]`, los errores se muestran en sus campos (`serverFieldErrors` + `applyFieldErrors`). Un campo que el formulario no conoce va al aviso general con mensaje fijo. Hay tests para casos donde la validación local deja pasar y el servidor rechaza (por ejemplo, un DNI que el servidor considera inválido o un email que rechaza).
+
+### D10 — Lista y búsqueda
+- Formulario de búsqueda (`q`) con botón "Buscar" (sin búsqueda al tipear), casilla "Incluir dados de baja" y paginación "Anterior/Siguiente" con "Página N de M". Se descartan las respuestas viejas.
+- Tabla: apellido y nombre, DNI, teléfono y estado. Acciones por fila: "Editar", "Ficha" (solo `GESTION`; se agrega en C-12b), "Dar de baja" con confirmación en dos pasos en la fila, o "Reactivar" (solo `GESTION`).
+- `404` en baja o reactivación → "El paciente ya no existe" y recarga. `403` → mensaje fijo.
+
+### D11 — DNI duplicado
+- **Contrato verificado** (lectura del backend y handoff de C-05, 2026-11-24):
+  - `ApiExceptionHandler.dniDuplicado` responde `409` con `pacienteId` siempre y **nunca** con `codigo`.
+  - `PacienteService` lanza `DniDuplicadoException` solo con el id de un paciente existente, en el chequeo previo y en la carrera atrapada por la `UNIQUE`.
+- **Regla A-D11** (pedida por la persona, 2026-11-24): todo `409` con `pacienteId` es DNI duplicado, **traiga o no `codigo`**. En alta o edición:
+  - Aviso fijo "Ya existe un paciente con ese DNI" en el campo DNI.
+  - Enlace "Ver paciente existente" → `#/pacientes/<pacienteId>`.
+  - En esa pantalla, si el paciente está inactivo y el rol es `GESTION`, se ofrece "Reactivar".
+- Un `409` **sin** `pacienteId` (con o sin `codigo`) no es DNI duplicado: mensaje genérico fijo de `conflict`, sin marcar el DNI ni mostrar enlace (A-D3). Esto reemplaza la aclaración de la tarea 4.5, que decidía por la ausencia de `codigo`.
+
+## Risks / Trade-offs
+
+- **Edición concurrente de pacientes (riesgo aceptado)**: `paciente` no tiene `version` (C-05). Si dos personas editan a la vez, **gana la última** sin aviso. Resolverlo requiere una migración y otra ficha de backend.
+- **Autor de nota por id (deuda, A-D7)**: "Profesional #id" hasta que exista un endpoint con nombres.
+- **Lecturas auditadas**: cada apertura de ficha genera `READ` de `FichaClinica` y de `NotaClinica`, y cada "Ver más" uno más. Es correcto según RN-DS-02; se evita duplicar dentro de una misma visita.
+- **XSS**: un XSS podría leer lo que está en pantalla o el token (riesgo aceptado en C-10). Mitigación: solo `h()`/`textContent`, lint y tests con contenido malicioso en todos los campos.
+- **Respuestas tardías**: se ignoran después de `dispose`, no se abortan (igual que C-10/C-11).
+- **Validación duplicada**: las reglas del cliente pueden desfasarse del backend. Mitigación: A-D9.
+- **Ruta con id inválido → `#/inicio`**: es coherente con la spec existente. No muestra un "no encontrado" explícito a nivel de router; el "Paciente no encontrado" se muestra dentro de la página ante un `404` de la API.
+
+## Partición
+
+El trabajo se hace en dos partes, en este orden. Cada una se revisa por separado; si el reviewer lo pide, cada una va en su propio PR.
+
+- **C-12a — pacientes, router y `ApiError`** (tasks §0–4, 6a, 7a):
+  - `ApiError` con `codigo`/`pacienteId`, router con parámetros, `form.ts` (textarea incluida, por ser compartida).
+  - Cliente y pantallas de pacientes, e ítem "Pacientes" del menú.
+  - Tests de XSS de pacientes (datos personales y mensajes de error del servidor).
+  - **La ruta `/pacientes/:id/ficha` no se registra.** Entrar por URL se trata como ruta desconocida (`#/inicio`, ninguna request además del `me()` del arranque). Lo verifica un test (tasks 3.4).
+  - **El enlace "Ficha" no aparece** para ningún rol. Lo verifica otro test (tasks 4.4).
+  - `PageContext.ficha` y `puedeVerFicha` tampoco existen todavía.
+  - Se puede mergear sola, sin dejar nada a medio hacer visible.
+  - **Sin handoff ni `[x]` en CHANGES.md**: C-12 sigue abierto.
+- **C-12b — ficha clínica** (tasks §5, 6b, 7b):
+  - Cliente y pantalla de ficha, `PageContext.ficha` y `puedeVerFicha`.
+  - Registro de `/pacientes/:id/ficha` y enlace "Ficha" solo para `GESTION`.
+  - Tests de XSS de consentimiento, anamnesis y notas.
+  - Reemplaza los dos tests de C-12a que fijan la ausencia de la ruta y del enlace. Son tests propios de C-12; los tests preexistentes protegidos por A-D1 no se tocan.
+  - Depende de C-12a.
+  - **Cierra C-12**: handoff `knowledge-base/entrega/C-12.md`, `[x]` en CHANGES.md tras la verificación manual, archivo del change y sincronización de specs.
+- **Specs**: los deltas de `specs/` describen el estado final de C-12, después de C-12b, y se sincronizan una sola vez, al archivar después de C-12b. **Lo que todavía no se cumple en C-12a es esperado; el reviewer no debe marcarlo como faltante.**
+
+  | Spec | Requisito o escenario | En C-12a |
+  |---|---|---|
+  | `frontend-clinical-record` | Todos los requisitos y escenarios | No se cumple: la ficha es C-12b |
+  | `frontend-shell` | Rutas por hash › *Ruta con parámetro válido* (`#/pacientes/12/ficha`) | No se cumple: la ruta no está registrada y va a `#/inicio` (tasks 3.4). El parámetro válido se prueba con `#/pacientes/12` y con rutas de prueba (tasks 2.1) |
+  | `frontend-shell` | Rutas por hash › *Cambio de parámetro* (`/pacientes/1/ficha` → `/2/ficha`) | No se cumple con la ficha; el mismo comportamiento se prueba con `/pacientes/1` → `/pacientes/2` (tasks 2.1) |
+  | `frontend-shell` | Navegación a pacientes (texto del requisito: `#/pacientes/:id/ficha` protegida) | Parcial: las otras tres rutas sí; la de ficha no existe |
+  | `frontend-shell` | Navegación a pacientes › *Ficha sin sesión* | Se cumple igual: la ruta desconocida va a `#/inicio` y el guard la manda a `#/login`, sin requests |
+  | `frontend-patients` | Permisos de pacientes en la UI › *Profesional en la lista* ("Ficha" en ambos) | Parcial: "Dar de baja" y "Reactivar" sí; "Ficha" no aparece para ningún rol (tasks 4.4) |
+
+  El resto de `frontend-shell`, `frontend-patients` y `frontend-api-client` se cumple completo en C-12a.
+- Ambas partes son governance ALTO (C-12b por datos de salud; C-12a por los cambios en el cliente HTTP compartido) y requieren review de integrante-1 o integrante-2.
+- **Rama**: todo sigue en `c-12-frontend-pacientes-ficha`. Si el reviewer pide partir el PR, la persona separa las ramas y los nombres se acuerdan en ese momento.
+
+## Checkpoints para el reviewer (regla 12)
+
+C-12a:
+- `api/errors.ts`: `codigo` y `pacienteId` validados, sin eco de `detail`.
+- `api/rutas.ts`: `conId` y `conQuery` se movieron desde `api/agendaConfig.ts`, **archivo de C-11**. Es solo un movimiento, sin cambio de comportamiento: `agendaConfig.ts` los importa y sus tests (`agendaConfig.test.ts`) pasan sin modificarse.
+- `pages/pacientes/formulario.ts`: DNI duplicado solo con `pacienteId` (A-D11).
+- `router/router.ts`: id inválido → ninguna request.
+- `routes.ts`: sin `/pacientes/:id/ficha`; lista sin enlace "Ficha".
+- Datos personales como texto literal; mensajes de error del servidor sin `title` ni `detail`.
+
+C-12b:
+- `components/form.ts` (**componente compartido, introducido en C-12a**): `createTextAreaField({ avisarExceso: true })` **deja de poner el atributo `maxlength`** en las áreas de texto clínicas (anamnesis y notas).
+  - Motivo (A-D5b): con `maxlength`, el navegador corta en silencio un texto pegado que supera el límite, y se perdería texto clínico sin aviso.
+  - En su lugar se muestra "Máximo N caracteres (hay M)." y no se puede guardar.
+  - Sin `avisarExceso`, el componente sigue poniendo `maxlength` como antes. Los campos de pacientes de C-12a no cambian.
+- `pages/ficha/`:
+  - Sin consentimiento, sin anamnesis ni notas en el DOM y sin `GET /ficha`.
+  - `RECEPCION` sin requests.
+  - El 409 conserva lo escrito.
+  - `dispose` limpia.
+- Ningún dato clínico en almacenamiento, consola, URL ni título.
+
+## Integración con `main` (merge de `origin/main`, 2026-11-25)
+
+`main` trajo C-13 (agenda), C-15 (auditoría y export), C-09 y C-14 (recordatorios), que tocaron los mismos archivos compartidos. Qué cambió al resolver los conflictos, sin cambiar el comportamiento de C-12:
+
+- **Inicio**: con C-13, `HOME_PATH` es `#/agenda` y `#/inicio` es una redirección explícita.
+  - Donde este documento dice que un id inválido va a `#/inicio`, ahora va a `#/agenda`.
+  - La regla de A-D1 se mantiene: es ruta desconocida y la página de pacientes o ficha no hace requests.
+  - Los tests de app verifican que no hay requests a `/api/pacientes` ni a `/api/consentimientos`, porque la agenda hace las suyas al abrirse.
+  - La spec delta de `frontend-shell` se rebasó sobre el requisito actual de `main`.
+- **Router**: se combinan las `redirects` de C-13 (primero) con la resolución por parámetros de C-12.
+- **`api/pacientes.ts`**: C-13 creó un cliente mínimo (`buscar`, `obtener`) y pidió extenderlo, no duplicarlo. C-12 lo extiende en el mismo módulo e interfaz con `crear`, `editar`, `darDeBaja` y `reactivar`.
+  - `FiltroPacientes` queda con los campos opcionales de C-13.
+  - `buscar` valida la paginación solo cuando viene y no envía un `q` vacío o de espacios.
+- **`createTextAreaField`**: las dos ramas lo crearon. Queda una sola versión, con `maxLength` opcional.
+  - Sin él, el área se comporta como en C-13/C-14: sin atributo ni aviso.
+  - Con él, se comporta como en C-12 (D9, A-D5b).
+- **`ApiError`**: suma los campos de las dos ramas (`codigo` y `pacienteId` de C-12; `conflicto` y `bloqueoId` de C-13).
+- **Decodificadores**: se toman los de `main` y se endurecen dos validaciones compartidas que usaban los tests de C-12.
+  - `fechaNacimiento` debe existir en el calendario.
+  - `tamanio` de página ≥ 1.
+
+  Ningún test de `main` dependía de lo contrario, y el backend nunca devuelve esos casos.
+- **Fixtures**: `__fixtures__/pacientes.ts` queda como en `main`, porque los tests de C-13 dependen de su Ana con id 5. Las fixtures de C-12 pasan a `__fixtures__/pacientesAbm.ts` con los mismos valores; en los tests de C-12 solo cambió la ruta del import.
+- **Menú**: Agenda, Recordatorios, **Pacientes**, Configuración, Auditoría.
+  - Los tests de `main` que comparan la lista exacta del menú, de rutas y de métodos del mock de pacientes sumaron solo lo de C-12, el mismo criterio que usó C-14.

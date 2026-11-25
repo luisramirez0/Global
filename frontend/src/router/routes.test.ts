@@ -42,10 +42,11 @@ describe('la agenda como entrada (C-13, D10)', () => {
     }
   });
 
-  it('el menú principal es Agenda, Recordatorios (C-14), Configuración y Auditoría (C-15), en ese orden y sin Inicio', () => {
+  it('el menú principal es Agenda, Recordatorios (C-14), Pacientes (C-12), Configuración y Auditoría (C-15), en ese orden y sin Inicio', () => {
     expect(NAV_ITEMS).toEqual([
       { path: '/agenda', label: 'Agenda' },
       { path: '/recordatorios', label: 'Recordatorios' },
+      { path: '/pacientes', label: 'Pacientes' },
       { path: '/config/sillones', label: 'Configuración' },
       { path: '/auditoria', label: 'Auditoría', roles: ['ADMIN', 'PROFESIONAL'] },
     ]);
@@ -53,7 +54,22 @@ describe('la agenda como entrada (C-13, D10)', () => {
 
   it('regresión: las rutas previas siguen registradas y solo login y registro son para invitados', () => {
     expect(ROUTES.map((r) => r.path).sort()).toEqual(
-      ['/agenda', '/auditoria', '/config/bloqueos', '/config/horarios', '/config/prestaciones', '/config/sillones', '/login', '/recordatorios', '/registro'].sort(),
+      [
+        '/agenda',
+        '/auditoria',
+        '/config/bloqueos',
+        '/config/horarios',
+        '/config/prestaciones',
+        '/config/sillones',
+        '/login',
+        // Pacientes y ficha clínica (C-12).
+        '/pacientes',
+        '/pacientes/:id',
+        '/pacientes/:id/ficha',
+        '/pacientes/nuevo',
+        '/recordatorios',
+        '/registro',
+      ].sort(),
     );
     expect(ROUTES.filter((r) => r.guestOnly === true).map((r) => r.path).sort()).toEqual(['/login', '/registro']);
     expect(new Set(ROUTES.map((r) => r.path)).size).toBe(ROUTES.length);
@@ -83,5 +99,24 @@ describe('ruta de recordatorios (C-14)', () => {
     const i = NAV_ITEMS.findIndex((item) => item.path === '/agenda');
     expect(NAV_ITEMS[i + 1]).toEqual({ path: '/recordatorios', label: 'Recordatorios' });
     expect(NAV_ITEMS[i + 1]?.roles).toBeUndefined();
+  });
+});
+
+describe('rutas de pacientes (C-12a)', () => {
+  it.each(['/pacientes', '/pacientes/nuevo', '/pacientes/:id'])('%s es una ruta protegida registrada', (path) => {
+    const route = ROUTES.find((r) => r.path === path);
+    expect(route, path).toBeDefined();
+    expect(route?.guestOnly).not.toBe(true);
+  });
+
+  it('el menú principal ofrece "Pacientes" y apunta a una ruta registrada', () => {
+    expect(NAV_ITEMS).toContainEqual({ path: '/pacientes', label: 'Pacientes' });
+    expect(NAV_ITEMS.every((item) => ROUTES.some((r) => r.path === item.path))).toBe(true);
+  });
+
+  it('C-12b (5.9, reemplaza el caso de C-12a): /pacientes/:id/ficha está registrada y es protegida', () => {
+    const route = ROUTES.find((r) => r.path === '/pacientes/:id/ficha');
+    expect(route).toBeDefined();
+    expect(route?.guestOnly).not.toBe(true);
   });
 });

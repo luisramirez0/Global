@@ -10,11 +10,20 @@ export interface Page {
   dispose?: () => void;
 }
 
+/** Parámetros de una ruta con segmentos `:nombre` (C-12, D1): siempre enteros positivos seguros. */
+export type RouteParams = Readonly<Record<string, number>>;
+
 export interface Route<C> {
+  /**
+   * Ruta exacta (`/pacientes`) o con segmentos de parámetro (`/pacientes/:id`). Un parámetro solo coincide con un
+   * entero positivo en decimal, sin ceros a la izquierda y no mayor que `Number.MAX_SAFE_INTEGER`; si no, la ruta
+   * es desconocida. Las rutas exactas tienen prioridad.
+   */
   path: string;
   /** Solo sin sesión (login, registro); con sesión redirige al inicio. */
   guestOnly?: boolean;
-  render(context: C): Page;
+  /** `params` está vacío en las rutas sin parámetros. */
+  render(context: C, params: RouteParams): Page;
 }
 
 export interface RouterConfig<C> {
@@ -49,25 +58,92 @@ export function parseHash(hash: string): string {
   return path.startsWith('/') ? path : `/${path}`;
 }
 
+const PARAM_NAME = /^:[a-z][A-Za-z0-9]*$/;
+const PARAM_VALUE = /^[1-9][0-9]*$/;
+
+/** Un segmento literal o el nombre de un parámetro (sin `:`). */
+type Segment = { readonly literal: string } | { readonly param: string };
+
+interface Pattern<C> {
+  route: Route<C>;
+  segments: readonly Segment[];
+}
+
+interface Match<C> {
+  route: Route<C>;
+  params: RouteParams;
+}
+
+function compilePattern<C>(route: Route<C>): Pattern<C> {
+  const names = new Set<string>();
+  const segments = route.path.split('/').map((segment): Segment => {
+    if (!segment.startsWith(':')) return { literal: segment };
+    if (!PARAM_NAME.test(segment) || names.has(segment)) {
+      throw new Error(`Ruta inválida: ${route.path}`);
+    }
+    names.add(segment);
+    return { param: segment.slice(1) };
+  });
+  return { route, segments };
+}
+
+/** Entero positivo seguro o `null`: nada de signos, decimales, exponentes, ceros a la izquierda ni dígitos no ASCII. */
+function parseParam(value: string): number | null {
+  if (!PARAM_VALUE.test(value)) return null;
+  const n = Number(value);
+  return Number.isSafeInteger(n) ? n : null;
+}
+
+function matchPattern<C>(pattern: Pattern<C>, path: string): Match<C> | null {
+  const parts = path.split('/');
+  if (parts.length !== pattern.segments.length) return null;
+  const params: Record<string, number> = {};
+  for (let i = 0; i < parts.length; i += 1) {
+    const segment = pattern.segments[i];
+    const part = parts[i];
+    if (segment === undefined || part === undefined) return null;
+    if ('literal' in segment) {
+      if (segment.literal !== part) return null;
+    } else {
+      const value = parseParam(part);
+      if (value === null) return null;
+      params[segment.param] = value;
+    }
+  }
+  return { route: pattern.route, params };
+}
+
 export function createRouter<C>(config: RouterConfig<C>): Router {
   const { win, outlet, routes, context } = config;
-  const byPath = new Map(routes.map((r) => [r.path, r]));
+  const isPattern = (r: Route<C>): boolean => r.path.includes(':');
+  const byPath = new Map(routes.filter((r) => !isPattern(r)).map((r) => [r.path, r]));
+  const patterns = routes.filter(isPattern).map(compilePattern);
   let rendered: { path: string; page: Page } | null = null;
   let started = false;
 
-  function find(path: string): Route<C> {
-    const route = byPath.get(path);
-    if (route === undefined) {
+  function match(path: string): Match<C> | null {
+    const exact = byPath.get(path);
+    if (exact !== undefined) return { route: exact, params: {} };
+    for (const pattern of patterns) {
+      const found = matchPattern(pattern, path);
+      if (found !== null) return found;
+    }
+    return null;
+  }
+
+  function find(path: string): Match<C> {
+    const found = match(path);
+    if (found === null) {
       throw new Error(`Ruta no registrada: ${path}`);
     }
-    return route;
+    return found;
   }
 
   function target(solicitada: string): string {
+    // Redirecciones explícitas primero (C-13), después la resolución con parámetros (C-12, D1).
     const requested = config.redirects?.get(solicitada) ?? solicitada;
-    const known = byPath.get(requested);
-    const candidate = known === undefined ? config.homePath : requested;
-    const route = find(candidate);
+    const candidate = match(requested) === null ? config.homePath : requested;
+    const { route } = find(candidate);
     const authenticated = config.isAuthenticated();
     if (route.guestOnly === true && authenticated) return config.homePath;
     if (route.guestOnly !== true && !authenticated) return config.loginPath;
@@ -75,7 +151,8 @@ export function createRouter<C>(config: RouterConfig<C>): Router {
   }
 
   function render(path: string): void {
-    const page = find(path).render(context);
+    const { route, params } = find(path);
+    const page = route.render(context, params);
     rendered?.page.dispose?.();
     rendered = { path, page };
     outlet.replaceChildren(page.element);

@@ -6,11 +6,15 @@ export interface FieldOptions {
   id: string;
   name: string;
   label: string;
-  type: 'text' | 'email' | 'password' | 'time' | 'date' | 'datetime-local';
+  type: 'text' | 'email' | 'password' | 'time' | 'date' | 'datetime-local' | 'tel';
   autocomplete: string;
   required?: boolean;
   /** Teclado sugerido en móviles (p. ej. `numeric`). */
   inputmode?: 'numeric' | 'text';
+  /** Largo máximo en caracteres (C-12). */
+  maxLength?: number;
+  /** Ayuda visible bajo el campo, como texto, enlazada con `aria-describedby` (C-12). */
+  hint?: string;
 }
 
 /** Lo mínimo que necesita `applyFieldErrors`: un campo con nombre, error accesible y foco (C-11). */
@@ -27,15 +31,14 @@ export interface Field extends FormControl {
   setValue(value: string): void;
 }
 
-function markError(control: HTMLElement, error: HTMLElement, message: string | null): void {
+/** `hintId`: ayuda que queda siempre en `aria-describedby`; sin ella, el comportamiento es el de C-10. */
+function markError(control: HTMLElement, error: HTMLElement, message: string | null, hintId: string | null = null): void {
   error.textContent = message ?? '';
-  if (message === null) {
-    control.removeAttribute('aria-invalid');
-    control.removeAttribute('aria-describedby');
-  } else {
-    control.setAttribute('aria-invalid', 'true');
-    control.setAttribute('aria-describedby', error.id);
-  }
+  const describedBy = [hintId, message === null ? null : error.id].filter((v): v is string => v !== null);
+  if (message === null) control.removeAttribute('aria-invalid');
+  else control.setAttribute('aria-invalid', 'true');
+  if (describedBy.length === 0) control.removeAttribute('aria-describedby');
+  else control.setAttribute('aria-describedby', describedBy.join(' '));
 }
 
 export interface SelectOption {
@@ -94,9 +97,20 @@ export function createField(options: FieldOptions): Field {
     required: options.required ?? false,
   };
   if (options.inputmode !== undefined) attrs['inputmode'] = options.inputmode;
+  if (options.maxLength !== undefined) attrs['maxlength'] = String(options.maxLength);
   const input = h('input', { id: options.id, attrs });
   const error = h('p', { id: errorId, className: 'error-campo' });
-  const element = h('div', { className: 'campo' }, h('label', { attrs: { for: options.id } }, options.label), input, error);
+  const hintId = options.hint === undefined ? null : `${options.id}-hint`;
+  const hint = hintId === null ? null : h('p', { id: hintId, className: 'ayuda-campo' }, options.hint);
+  const element = h(
+    'div',
+    { className: 'campo' },
+    h('label', { attrs: { for: options.id } }, options.label),
+    input,
+    hint,
+    error,
+  );
+  markError(input, error, null, hintId);
 
   return {
     name: options.name,
@@ -106,7 +120,7 @@ export function createField(options: FieldOptions): Field {
     setValue(value) {
       input.value = value;
     },
-    setError: (message) => markError(input, error, message),
+    setError: (message) => markError(input, error, message, hintId),
     focus: () => input.focus(),
   };
 }
@@ -115,6 +129,23 @@ export interface TextAreaFieldOptions {
   id: string;
   name: string;
   label: string;
+  /**
+   * Largo máximo (C-12: textos clínicos con límite en el backend). Sin él, el área no tiene límite en el cliente (uso de
+   * C-13/C-14: notas y motivos del turno, que validan aparte).
+   */
+  maxLength?: number;
+  required?: boolean;
+  rows?: number;
+  /**
+   * C-12b (A-D5b): sin atributo `maxlength`, porque el navegador cortaría en silencio un texto pegado. En su lugar,
+   * al pasarse del máximo se muestra un error con la cuenta y el texto se conserva completo. Requiere `maxLength`.
+   */
+  avisarExceso?: boolean;
+}
+
+/** Aviso de exceso de largo con la cantidad actual (C-12b, A-D5b). */
+export function mensajeExceso(max: number, actual: number): string {
+  return `Máximo ${max} caracteres (hay ${actual}).`;
 }
 
 export interface TextAreaField extends FormControl {
@@ -124,10 +155,31 @@ export interface TextAreaField extends FormControl {
   setValue(value: string): void;
 }
 
-/** Texto de varias líneas con el mismo patrón accesible que `createField` (C-13: notas del turno). */
+/**
+ * Texto de varias líneas con el mismo patrón accesible que `createField`. C-13/C-14 lo usan sin opciones extra (notas y
+ * motivos del turno); C-12 suma `maxLength`, `required`, `rows` y `avisarExceso` (D9, A-D5b).
+ */
 export function createTextAreaField(options: TextAreaFieldOptions): TextAreaField {
+  const max = options.maxLength;
+  const avisar = (options.avisarExceso ?? false) && max !== undefined;
+  const attrs: Record<string, string | boolean> = { name: options.name };
+  if (options.required === true) attrs['required'] = true;
+  if (max !== undefined && !avisar) attrs['maxlength'] = String(max);
+  const textarea = h('textarea', { id: options.id, attrs });
+  if (options.rows !== undefined) textarea.rows = options.rows;
   const error = h('p', { id: `${options.id}-error`, className: 'error-campo' });
-  const textarea = h('textarea', { id: options.id, attrs: { name: options.name } });
+  if (avisar) {
+    let excedido = false;
+    textarea.addEventListener('input', () => {
+      if (textarea.value.length > max) {
+        excedido = true;
+        markError(textarea, error, mensajeExceso(max, textarea.value.length));
+      } else if (excedido) {
+        excedido = false;
+        markError(textarea, error, null);
+      }
+    });
+  }
   const element = h('div', { className: 'campo' }, h('label', { attrs: { for: options.id } }, options.label), textarea, error);
   return {
     name: options.name,

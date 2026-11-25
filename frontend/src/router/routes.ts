@@ -1,6 +1,7 @@
 import type { NavItem } from '../components/layout';
 import { renderAuditoria } from '../pages/auditoria/auditoria';
 import { renderBloqueos } from '../pages/config/bloqueos';
+import { renderFicha } from '../pages/ficha/ficha';
 import { renderHorarios } from '../pages/config/horarios';
 import { CONFIG_HOME } from '../pages/config/nav';
 import { renderPrestaciones } from '../pages/config/prestaciones';
@@ -9,6 +10,8 @@ import type { PageContext } from '../pages/context';
 import { renderAgenda } from '../pages/agenda/agenda';
 import { renderRecordatorios } from '../pages/recordatorios/recordatorios';
 import { renderLogin } from '../pages/login/login';
+import { renderNuevoPaciente, renderPaciente } from '../pages/pacientes/formulario';
+import { renderPacientes } from '../pages/pacientes/lista';
 import { renderRegistro } from '../pages/registro/registro';
 import { HOME_PATH, LOGIN_PATH } from './paths';
 import type { Route } from './router';
@@ -31,6 +34,12 @@ export const ROUTES: readonly Route<PageContext>[] = [
   { path: '/config/prestaciones', render: renderPrestaciones },
   { path: '/config/horarios', render: renderHorarios },
   { path: '/config/bloqueos', render: renderBloqueos },
+  // Pacientes (C-12a) y ficha clínica (C-12b). La ficha solo la ven ADMIN y PROFESIONAL: con otro rol la página
+  // muestra un aviso y no hace requests (tasks 5.7).
+  { path: '/pacientes', render: renderPacientes },
+  { path: '/pacientes/nuevo', render: renderNuevoPaciente },
+  { path: '/pacientes/:id', render: renderPaciente },
+  { path: '/pacientes/:id/ficha', render: renderFicha },
   // Auditoría y export de datos de pacientes (C-15).
   { path: '/auditoria', render: renderAuditoria },
 ];
@@ -41,6 +50,7 @@ export const REDIRECTS: ReadonlyMap<string, string> = new Map([['/inicio', HOME_
 export const NAV_ITEMS: readonly NavItem[] = [
   { path: HOME_PATH, label: 'Agenda' },
   { path: '/recordatorios', label: 'Recordatorios' },
+  { path: '/pacientes', label: 'Pacientes' },
   { path: CONFIG_HOME, label: 'Configuración' },
   { path: '/auditoria', label: 'Auditoría', roles: ['ADMIN', 'PROFESIONAL'] },
 ];

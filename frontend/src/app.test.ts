@@ -298,6 +298,7 @@ describe('7.2 roles y menú', () => {
   const BASE = [
     ['Agenda', '#/agenda'],
     ['Recordatorios', '#/recordatorios'],
+    ['Pacientes', '#/pacientes'],
     ['Configuración', '#/config/sillones'],
   ];
   const CON_AUDITORIA = [...BASE, ['Auditoría', '#/auditoria']];
@@ -306,7 +307,7 @@ describe('7.2 roles y menú', () => {
     ['ADMIN', CON_AUDITORIA],
     ['PROFESIONAL', CON_AUDITORIA],
     ['RECEPCION', BASE],
-  ] as const)('%s llega a #/agenda y ve "Agenda" y "Configuración" (y "Auditoría" según C-15), sin "Inicio"', async (rol, esperados) => {
+  ] as const)('%s llega a #/agenda y ve "Agenda", "Pacientes" (C-12) y "Configuración" (y "Auditoría" según C-15), sin "Inicio"', async (rol, esperados) => {
     storeSession();
     window.history.replaceState(null, '', '#/agenda');
     await mount(apiFalsa(meConRol(rol))).ready;
@@ -489,5 +490,233 @@ describe('B1 (revisión de C-14) el registro de envíos se vacía al terminar la
     expect(main().querySelector('.recordatorio-item')).toBeNull();
     await loginYIrARecordatorios();
     expect(emailBtn().disabled).toBe(false);
+  });
+});
+
+describe('rutas de pacientes con id inválido (C-12, A-D1)', () => {
+  it.each(['#/pacientes/abc', '#/pacientes/-1', '#/pacientes/0', '#/pacientes/01', '#/pacientes/1.5', '#/pacientes/9007199254740993'])(
+    'con sesión %s es ruta desconocida: va a la entrada (#/agenda, C-13) sin ninguna request de pacientes ni de ficha',
+    async (hash) => {
+      storeSession();
+      window.history.replaceState(null, '', hash);
+      const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK));
+      await mount(fetchFn).ready;
+      expect(window.location.hash).toBe('#/agenda');
+      expect(fetchFn.mock.calls[0]?.[0]).toBe('http://api.test/api/auth/me');
+      // La agenda pide sus propios datos al abrirse (C-13); ninguna request es de pacientes ni de historia clínica.
+      expect(fetchFn.mock.calls.map((c) => String(c[0])).filter((u) => /\/api\/(pacientes|consentimientos)/.test(u))).toEqual([]);
+    },
+  );
+
+  it.each(['#/pacientes/abc', '#/pacientes/-1'])('sin sesión %s va a login sin requests', async (hash) => {
+    window.history.replaceState(null, '', hash);
+    const fetchFn = vi.fn<typeof fetch>();
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/login');
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+});
+
+describe('pacientes (C-12a)', () => {
+  it('el menú ofrece "Pacientes" a #/pacientes', async () => {
+    storeSession();
+    window.history.replaceState(null, '', '#/inicio');
+    await mount(vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK))).ready;
+    const link = document.querySelector('nav[aria-label="Principal"] a[href="#/pacientes"]');
+    expect(link?.textContent).toBe('Pacientes');
+  });
+
+  it.each([
+    ['#/pacientes', 'Pacientes'],
+    ['#/pacientes/nuevo', 'Nuevo paciente'],
+    ['#/pacientes/7', 'Paciente'],
+  ])('con sesión %s renderiza la página "%s"', async (hash, titulo) => {
+    storeSession();
+    window.history.replaceState(null, '', hash);
+    await mount(vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK))).ready;
+    expect(window.location.hash).toBe(hash);
+    expect(main().querySelector('h1')?.textContent).toBe(titulo);
+    expect(document.title).toBe(`${titulo} · Global`);
+  });
+
+  it.each(['#/pacientes', '#/pacientes/nuevo', '#/pacientes/7'])('sin sesión %s va a login sin requests', async (hash) => {
+    window.history.replaceState(null, '', hash);
+    const fetchFn = vi.fn<typeof fetch>();
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/login');
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+});
+
+describe('ficha registrada (C-12b, tasks 5.9; reemplaza el caso 3.4 de C-12a)', () => {
+  const PACIENTE_5 = {
+    id: 5,
+    nombre: 'Ana',
+    apellido: 'Pérez',
+    dni: '30111222',
+    fechaNacimiento: null,
+    sexo: null,
+    telefono: null,
+    email: null,
+    direccion: null,
+    obraSocialTexto: null,
+    activo: true,
+  };
+  const TEXTO = { version: 'v1', contenido: 'Autorizo.', vigenteDesde: '2026-01-01T03:00:00Z' };
+
+  /** Responde según la URL: el orden de las requests en paralelo no importa. */
+  function api(rol: 'ADMIN' | 'PROFESIONAL' | 'RECEPCION'): ReturnType<typeof vi.fn<typeof fetch>> {
+    return vi.fn<typeof fetch>().mockImplementation((input) => {
+      const url = String(input);
+      if (url.endsWith('/auth/me')) return Promise.resolve(jsonResponse(200, { ...ME_OK, usuario: { ...ME_OK.usuario, rol } }));
+      if (url.endsWith('/pacientes/5')) return Promise.resolve(jsonResponse(200, PACIENTE_5));
+      if (url.endsWith('/pacientes/5/consentimientos')) return Promise.resolve(jsonResponse(200, []));
+      if (url.endsWith('/consentimientos/texto-vigente')) return Promise.resolve(jsonResponse(200, TEXTO));
+      return Promise.resolve(problemResponse(404, {}));
+    });
+  }
+
+  function rutas(fetchFn: ReturnType<typeof vi.fn<typeof fetch>>): string[] {
+    return fetchFn.mock.calls.map((c) => String(c[0]).replace('http://api.test/api', '')).sort();
+  }
+
+  it.each(['ADMIN', 'PROFESIONAL'] as const)('con %s, #/pacientes/5/ficha se resuelve y pide paciente, consentimientos y texto', async (rol) => {
+    storeSession();
+    window.history.replaceState(null, '', '#/pacientes/5/ficha');
+    const fetchFn = api(rol);
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/pacientes/5/ficha');
+    expect(main().querySelector('h1')?.textContent).toBe('Ficha clínica');
+    expect(document.title).toBe('Ficha clínica · Global');
+    await vi.waitFor(() => expect(main().textContent).toContain('Autorizo.'));
+    expect(rutas(fetchFn)).toEqual(['/auth/me', '/consentimientos/texto-vigente', '/pacientes/5', '/pacientes/5/consentimientos']);
+    expect(new Headers(fetchFn.mock.calls[1]?.[1]?.headers).get('Authorization')).toBe('Bearer t1');
+  });
+
+  it('con RECEPCION, #/pacientes/5/ficha muestra el aviso y solo se pidió el me() del arranque', async () => {
+    storeSession();
+    window.history.replaceState(null, '', '#/pacientes/5/ficha');
+    const fetchFn = api('RECEPCION');
+    await mount(fetchFn).ready;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(window.location.hash).toBe('#/pacientes/5/ficha');
+    expect(main().textContent).toContain('Sin permiso para ver la historia clínica.');
+    expect(rutas(fetchFn)).toEqual(['/auth/me']);
+  });
+
+  it('sin sesión, #/pacientes/5/ficha va al login sin requests', async () => {
+    window.history.replaceState(null, '', '#/pacientes/5/ficha');
+    const fetchFn = vi.fn<typeof fetch>();
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/login');
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it.each(['#/pacientes/abc/ficha', '#/pacientes/-1/ficha', '#/pacientes/0/ficha'])(
+    'con ADMIN, %s (id inválido) va a la entrada (#/agenda, C-13) sin ninguna request de pacientes ni de ficha',
+    async (hash) => {
+      storeSession();
+      window.history.replaceState(null, '', hash);
+      const fetchFn = api('ADMIN');
+      await mount(fetchFn).ready;
+      expect(window.location.hash).toBe('#/agenda');
+      expect(rutas(fetchFn)).toContain('/auth/me');
+      expect(rutas(fetchFn).filter((r) => /^\/(pacientes|consentimientos)/.test(r))).toEqual([]);
+    },
+  );
+});
+
+describe('pacientes: cuerpos de error del servidor con contenido malicioso (C-12a, tasks 6a)', () => {
+  const PAYLOAD = '<img src=x onerror=alert(1)><script>alert(2)</script>';
+
+  it.each([
+    [400, { title: PAYLOAD, detail: PAYLOAD, errores: [{ campo: 'nombre', mensaje: PAYLOAD }] }],
+    [409, { title: PAYLOAD, detail: PAYLOAD, pacienteId: 3, codigo: 'DNI_DUPLICADO' }],
+    [409, { title: PAYLOAD, detail: PAYLOAD, codigo: '<b>X</b>' }],
+    [500, { title: PAYLOAD, detail: PAYLOAD }],
+  ])('alta que responde %i: title y detail no se muestran y no se crean nodos', async (status, cuerpo) => {
+    storeSession();
+    window.history.replaceState(null, '', '#/pacientes/nuevo');
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(200, ME_OK))
+      .mockResolvedValueOnce(problemResponse(status, cuerpo));
+    await mount(fetchFn).ready;
+    const form = main().querySelector('form');
+    if (form === null) throw new Error('sin formulario');
+    for (const [name, value] of Object.entries({ nombre: 'Ana', apellido: 'Pérez', dni: '30111222' })) {
+      const el = form.querySelector(`input[name="${name}"]`);
+      if (el instanceof HTMLInputElement) el.value = value;
+    }
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(2));
+    // Espera el aviso: en la alerta general o, en el DNI duplicado, en el error del campo.
+    await vi.waitFor(() => {
+      const general = main().querySelector('[role="alert"]')?.textContent ?? '';
+      const campo = main().querySelector('.error-campo:not(:empty)')?.textContent ?? '';
+      expect(`${general}${campo}`).not.toBe('');
+    });
+    const texto = main().textContent ?? '';
+    // El title y el detail nunca se muestran; solo el mensaje por campo del 400 aparece, como texto literal.
+    if (status !== 400) expect(texto).not.toContain('alert(');
+    expect(document.querySelector('main img, main script')).toBeNull();
+    expect(texto).not.toContain('<b>X</b>');
+  });
+});
+
+describe('C-12a sin esqueletos (tasks 7a.3b)', () => {
+  const PACIENTE = {
+    id: 7,
+    nombre: 'Ana',
+    apellido: 'Pérez',
+    dni: '30111222',
+    fechaNacimiento: null,
+    sexo: null,
+    telefono: null,
+    email: null,
+    direccion: null,
+    obraSocialTexto: null,
+    activo: true,
+  };
+
+  async function abrir(hash: string, ...respuestas: Response[]): Promise<HTMLElement> {
+    storeSession();
+    window.history.replaceState(null, '', hash);
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(200, ME_OK));
+    for (const r of respuestas) fetchFn.mockResolvedValueOnce(r);
+    await mount(fetchFn).ready;
+    return main();
+  }
+
+  it('#/pacientes muestra la búsqueda y la tabla, no solo el h1', async () => {
+    const m = await abrir('#/pacientes', jsonResponse(200, { contenido: [PACIENTE], pagina: 0, tamanio: 20, totalElementos: 1, totalPaginas: 1 }));
+    expect(m.querySelector('form[role="search"] input[name="q"]')).not.toBeNull();
+    await vi.waitFor(() => expect(m.querySelector('tbody tr')?.textContent).toContain('Pérez, Ana'));
+  });
+
+  it('#/pacientes/nuevo muestra el formulario con los campos de D9', async () => {
+    const m = await abrir('#/pacientes/nuevo');
+    for (const name of ['nombre', 'apellido', 'dni', 'fechaNacimiento', 'sexo', 'telefono', 'email', 'direccion', 'obraSocialTexto']) {
+      expect(m.querySelector(`form input[name="${name}"]`), name).not.toBeNull();
+    }
+  });
+
+  it('#/pacientes/7 muestra el formulario con los datos', async () => {
+    const m = await abrir('#/pacientes/7', jsonResponse(200, PACIENTE));
+    await vi.waitFor(() => {
+      const apellido = m.querySelector('input[name="apellido"]');
+      expect(apellido instanceof HTMLInputElement && apellido.value).toBe('Pérez');
+    });
+  });
+
+  it('#/pacientes/7 inexistente muestra "Paciente no encontrado"', async () => {
+    const m = await abrir('#/pacientes/7', problemResponse(404, {}));
+    await vi.waitFor(() => expect(m.textContent).toContain('Paciente no encontrado.'));
+  });
+
+  it.each(['#/pacientes', '#/pacientes/nuevo', '#/pacientes/7'])('%s tiene más que el h1', async (hash) => {
+    const m = await abrir(hash, jsonResponse(200, { contenido: [], pagina: 0, tamanio: 20, totalElementos: 0, totalPaginas: 0 }));
+    const section = m.querySelector('section');
+    expect(section?.children.length ?? 0).toBeGreaterThan(1);
   });
 });

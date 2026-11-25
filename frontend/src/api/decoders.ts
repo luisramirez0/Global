@@ -9,15 +9,18 @@ import {
   type AccionAuditoria,
   type Bloqueo,
   type CanalRecordatorio,
+  type Consentimiento,
   type DiaSemana,
   type EnlaceWhatsApp,
   type EstadoRecordatorio,
   type EntradaAuditoria,
   type EstadoTurno,
   type ExportPaciente,
+  type Ficha,
   type Horario,
   type LoginResponse,
   type MeResponse,
+  type Nota,
   type Paciente,
   type Pagina,
   type Prestacion,
@@ -26,6 +29,7 @@ import {
   type RegistroResponse,
   type Rol,
   type Sillon,
+  type TextoConsentimiento,
   type Turno,
   type TurnoPendiente,
   type UltimoRecordatorio,
@@ -199,9 +203,15 @@ export function decodeTurno(value: unknown): Turno {
 
 /* Pacientes (C-05). */
 
+/** `LocalDate` de Java (`YYYY-MM-DD`) que además existe en el calendario (C-12: `1985-02-30` → `unexpected`). */
 function fechaOrNull(o: Obj, key: string): string | null {
   const v = strOrNull(o, key);
-  if (v !== null && !/^\d{4}-\d{2}-\d{2}$/.test(v)) fail();
+  if (v === null) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) fail();
+  const [y, m, d] = v.split('-').map(Number);
+  if (y === undefined || m === undefined || d === undefined) fail();
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) fail();
   return v;
 }
 
@@ -209,6 +219,13 @@ function fechaOrNull(o: Obj, key: string): string | null {
 function nonNegativeInt(o: Obj, key: string): number {
   const v = o[key];
   if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < 0) fail();
+  return v;
+}
+
+/** Entero seguro y positivo (tamaño de página). */
+function positiveInt(o: Obj, key: string): number {
+  const v = nonNegativeInt(o, key);
+  if (v < 1) fail();
   return v;
 }
 
@@ -272,7 +289,8 @@ export function paginaOf<T>(decode: (value: unknown) => T): (value: unknown) => 
     return {
       contenido: listOf(decode)(o['contenido']),
       pagina: nonNegativeInt(o, 'pagina'),
-      tamanio: nonNegativeInt(o, 'tamanio'),
+      // El backend nunca responde una página de tamaño 0 (C-12: `tamanio: 0` → `unexpected`).
+      tamanio: positiveInt(o, 'tamanio'),
       totalElementos: nonNegativeInt(o, 'totalElementos'),
       totalPaginas: nonNegativeInt(o, 'totalPaginas'),
     };
@@ -345,5 +363,66 @@ export function decodeTurnoPendiente(value: unknown): TurnoPendiente {
     tieneTelefono: bool(o, 'tieneTelefono'),
     tieneEmail: bool(o, 'tieneEmail'),
     ultimoRecordatorio: o['ultimoRecordatorio'] === null || o['ultimoRecordatorio'] === undefined ? null : decodeUltimoRecordatorio(o['ultimoRecordatorio']),
+  };
+}
+
+/* Historia clínica (C-08; C-12b). */
+
+function boolOrNull(o: Obj, key: string): boolean | null {
+  return o[key] === null || o[key] === undefined ? null : bool(o, key);
+}
+
+function instantOrNull(o: Obj, key: string): string | null {
+  return o[key] === null || o[key] === undefined ? null : instant(o, key);
+}
+
+/** `@Version` de JPA: entero ≥ 0, o `null` si la ficha no fue cargada. */
+function versionOrNull(o: Obj, key: string): number | null {
+  return o[key] === null || o[key] === undefined ? null : nonNegativeInt(o, key);
+}
+
+export function decodeConsentimiento(value: unknown): Consentimiento {
+  const o = obj(value);
+  return {
+    id: id(o, 'id'),
+    versionTexto: str(o, 'versionTexto', { nonEmpty: true }),
+    aceptadoEn: instant(o, 'aceptadoEn'),
+    registradoPorUsuarioId: id(o, 'registradoPorUsuarioId'),
+  };
+}
+
+export function decodeTextoConsentimiento(value: unknown): TextoConsentimiento {
+  const o = obj(value);
+  return {
+    version: str(o, 'version', { nonEmpty: true }),
+    contenido: str(o, 'contenido'),
+    vigenteDesde: instant(o, 'vigenteDesde'),
+  };
+}
+
+export function decodeFicha(value: unknown): Ficha {
+  const o = obj(value);
+  return {
+    pacienteId: id(o, 'pacienteId'),
+    alergias: strOrNull(o, 'alergias'),
+    medicacionActual: strOrNull(o, 'medicacionActual'),
+    antecedentesMedicos: strOrNull(o, 'antecedentesMedicos'),
+    enfermedadesRelevantes: strOrNull(o, 'enfermedadesRelevantes'),
+    embarazo: boolOrNull(o, 'embarazo'),
+    motivoConsulta: strOrNull(o, 'motivoConsulta'),
+    observaciones: strOrNull(o, 'observaciones'),
+    version: versionOrNull(o, 'version'),
+    actualizadaEn: instantOrNull(o, 'actualizadaEn'),
+  };
+}
+
+export function decodeNota(value: unknown): Nota {
+  const o = obj(value);
+  return {
+    id: id(o, 'id'),
+    fecha: instant(o, 'fecha'),
+    profesionalId: id(o, 'profesionalId'),
+    turnoId: idOrNull(o, 'turnoId'),
+    texto: str(o, 'texto'),
   };
 }

@@ -2,10 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { createLoggedContext, createTestContext } from './pages';
 
 describe('contextos de prueba (7.4, aditivo)', () => {
-  it('createTestContext trae los mocks de turnos y pacientes con todos los métodos del cliente', () => {
+  it('createTestContext trae los mocks de turnos, pacientes y ficha con todos los métodos del cliente', () => {
     const ctx = createTestContext();
     expect(Object.keys(ctx.turnos).sort()).toEqual(['cambiarEstado', 'crear', 'listar', 'obtener', 'reprogramar']);
-    expect(Object.keys(ctx.pacientes).sort()).toEqual(['buscar', 'obtener']);
+    // C-12 extiende el cliente de pacientes de C-13 con el ABM.
+    expect(Object.keys(ctx.pacientes).sort()).toEqual(['buscar', 'crear', 'darDeBaja', 'editar', 'obtener', 'reactivar']);
+    expect(Object.keys(ctx.ficha).sort()).toEqual([
+      'crearNota',
+      'guardarFicha',
+      'listarConsentimientos',
+      'listarNotas',
+      'obtenerFicha',
+      'registrarConsentimiento',
+      'textoVigente',
+    ]);
     expect(Object.keys(ctx.agenda)).toContain('listarSillones');
   });
 

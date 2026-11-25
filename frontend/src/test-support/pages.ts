@@ -3,6 +3,7 @@ import { vi, type Mock } from 'vitest';
 import type { AgendaConfigApi } from '../api/agendaConfig';
 import type { AuditoriaApi } from '../api/auditoria';
 import type { AuthApi } from '../api/auth';
+import type { FichaApi } from '../api/ficha';
 import type { PacientesApi } from '../api/pacientes';
 import type { RecordatoriosApi } from '../api/recordatorios';
 import type { TurnosApi } from '../api/turnos';
@@ -14,9 +15,12 @@ import { createSession } from '../state/session';
 /** Cada método de la API de agenda como `vi.fn` tipado (C-11). */
 export type AgendaMock = { [K in keyof AgendaConfigApi]: Mock<AgendaConfigApi[K]> };
 
-/** Cada método de turnos y pacientes como `vi.fn` tipado (C-13). */
+/** Cada método de turnos y pacientes como `vi.fn` tipado (C-13; C-12 suma el ABM de pacientes). */
 export type TurnosMock = { [K in keyof TurnosApi]: Mock<TurnosApi[K]> };
 export type PacientesMock = { [K in keyof PacientesApi]: Mock<PacientesApi[K]> };
+
+/** Cada método de la API de historia clínica como `vi.fn` tipado (C-12b). */
+export type FichaMock = { [K in keyof FichaApi]: Mock<FichaApi[K]> };
 
 /** Cliente de auditoría y export como `vi.fn` tipado (C-15). */
 export type AuditoriaMock = { [K in keyof AuditoriaApi]: Mock<AuditoriaApi[K]> };
@@ -33,6 +37,7 @@ export interface TestContext extends PageContext {
   agenda: AgendaMock;
   turnos: TurnosMock;
   pacientes: PacientesMock;
+  ficha: FichaMock;
   auditoria: AuditoriaMock;
   recordatorios: RecordatoriosMock;
   navigate: ReturnType<typeof vi.fn<(path: string) => void>>;
@@ -70,7 +75,26 @@ function createTurnosMock(): TurnosMock {
 }
 
 function createPacientesMock(): PacientesMock {
-  return { buscar: vi.fn<PacientesApi['buscar']>(), obtener: vi.fn<PacientesApi['obtener']>() };
+  return {
+    buscar: vi.fn<PacientesApi['buscar']>(),
+    obtener: vi.fn<PacientesApi['obtener']>(),
+    crear: vi.fn<PacientesApi['crear']>(),
+    editar: vi.fn<PacientesApi['editar']>(),
+    darDeBaja: vi.fn<PacientesApi['darDeBaja']>(),
+    reactivar: vi.fn<PacientesApi['reactivar']>(),
+  };
+}
+
+function createFichaMock(): FichaMock {
+  return {
+    listarConsentimientos: vi.fn<FichaApi['listarConsentimientos']>(),
+    textoVigente: vi.fn<FichaApi['textoVigente']>(),
+    registrarConsentimiento: vi.fn<FichaApi['registrarConsentimiento']>(),
+    obtenerFicha: vi.fn<FichaApi['obtenerFicha']>(),
+    guardarFicha: vi.fn<FichaApi['guardarFicha']>(),
+    listarNotas: vi.fn<FichaApi['listarNotas']>(),
+    crearNota: vi.fn<FichaApi['crearNota']>(),
+  };
 }
 
 export function createTestContext(): TestContext {
@@ -79,6 +103,7 @@ export function createTestContext(): TestContext {
     agenda: createAgendaMock(),
     turnos: createTurnosMock(),
     pacientes: createPacientesMock(),
+    ficha: createFichaMock(),
     auditoria: { listar: vi.fn<AuditoriaApi['listar']>(), exportarPaciente: vi.fn<AuditoriaApi['exportarPaciente']>() },
     recordatorios: {
       enlaceWhatsApp: vi.fn<RecordatoriosApi['enlaceWhatsApp']>(),
@@ -150,10 +175,14 @@ export function alertText(root: ParentNode): string {
   return root.querySelector('[role="alert"]')?.textContent ?? '';
 }
 
+/** Texto del error del campo `name` (input, select o textarea). Con ayuda (`hint`, C-12) toma el id `…-error`. */
 export function errorOf(root: ParentNode, name: string): string {
-  const describedBy = input(root, name).getAttribute('aria-describedby');
-  if (describedBy === null) return '';
-  return root.querySelector(`#${describedBy}`)?.textContent ?? '';
+  const control = root.querySelector(`[name="${name}"]`);
+  if (control === null) throw new Error(`No existe el campo ${name}`);
+  const ids = (control.getAttribute('aria-describedby') ?? '').split(' ');
+  const errorId = ids.find((i) => i.endsWith('-error'));
+  if (errorId === undefined) return '';
+  return root.querySelector(`#${errorId}`)?.textContent ?? '';
 }
 
 /** Promesa controlable para simular una request pendiente. */
