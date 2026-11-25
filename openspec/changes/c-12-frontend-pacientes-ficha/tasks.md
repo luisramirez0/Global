@@ -237,7 +237,13 @@
 > - I6: el `409 PACIENTE_INACTIVO` al consentir no pasa a solo lectura (1).
 > - I7: pasar a solo lectura vuelve a pedir todo (2).
 
-- [ ] 5.7 RED: **rol** (D2): `RECEPCION` y sin perfil → aviso y **cero llamadas** a los mocks de pacientes y ficha; `PROFESIONAL` y `ADMIN` → piden paciente y consentimientos; `403` → mensaje fijo. GREEN.
+- [x] 5.7 (8 tests en `pages/ficha/rol.test.ts`; RED real 4/8: fallaban los de RECEPCION y sin perfil, los de ADMIN/PROFESIONAL y 403 ya pasaban. El control va primero en `renderFicha`, antes de crear nada que pueda pedir datos; se cuentan las llamadas a **todas** las APIs de pacientes y de ficha. Mutación hecha, ver nota) RED: **rol** (D2): `RECEPCION` y sin perfil → aviso y **cero llamadas** a los mocks de pacientes y ficha; `PROFESIONAL` y `ADMIN` → piden paciente y consentimientos; `403` → mensaje fijo. GREEN.
+> **Nota de mutación (5.7, 2026-11-25).** Sobre `permisos.ts` (commiteado) y `ficha.ts` (sin commitear), restaurados al final. **Mueren los 4**, y en todos falla `RECEPCION > ve el aviso fijo de falta de permiso y no se hace NINGUNA request`:
+> - R1: `puedeVerFicha` invertido (12 tests).
+> - R2: `puedeVerFicha` siempre `true` (6).
+> - R3: `puedeVerFicha` incluye RECEPCION (4).
+> - R4: sin el control de rol en la página (4).
+
 - [ ] 5.8 RED: **higiene** (D8):
   - `dispose` y respuesta tardía.
   - Título fijo.

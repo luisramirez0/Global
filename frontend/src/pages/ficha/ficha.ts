@@ -5,6 +5,7 @@ import type { Page, RouteParams } from '../../router/router';
 import { clear, h } from '../../utils/dom';
 import { formatearFechaHora } from '../../utils/zonaHoraria';
 import type { PageContext } from '../context';
+import { puedeVerFicha, rolActual } from '../permisos';
 import { crearAnamnesis, type Anamnesis } from './anamnesis';
 import {
   CODIGO_CONSENTIMIENTO_REQUERIDO,
@@ -15,6 +16,7 @@ import {
   MSG_INACTIVO,
   MSG_PACIENTE_NO_ENCONTRADO,
   MSG_SIN_CONSENTIMIENTO,
+  MSG_SIN_PERMISO_FICHA,
   MSG_SIN_TEXTO_VIGENTE,
   MSG_TEXTO_CAMBIO,
   TITULO_FICHA,
@@ -31,6 +33,13 @@ import { validarAceptacion } from './validacion';
  * lectura queda auditada, RN-DS-02). Los datos clínicos viven solo en esta página; `dispose` los suelta.
  */
 export function renderFicha(ctx: PageContext, params: RouteParams): Page {
+  // D2 / PA-07: sin permiso (RECEPCION o sin perfil) no se pide NADA, ni siquiera el paciente.
+  if (!puedeVerFicha(rolActual(ctx))) {
+    return {
+      title: TITULO_FICHA,
+      element: h('section', { className: 'pagina-ficha' }, h('h1', {}, TITULO_FICHA), h('p', { className: 'aviso' }, MSG_SIN_PERMISO_FICHA)),
+    };
+  }
   const id = params['id'];
   let disposed = false;
   /** Generación: sube al recargar o al bloquear, para descartar respuestas de un estado anterior. */
