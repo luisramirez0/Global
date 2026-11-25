@@ -7,6 +7,7 @@ import { MSG_CHECK_FIELDS, serverFieldErrors } from '../auth/messages';
 import {
   CODIGO_PROFESIONAL_NO_VINCULADO,
   MSG_NOTA_AGREGADA,
+  MSG_NO_SE_GUARDO,
   MSG_NOTAS_INMUTABLES,
   MSG_PROFESIONAL_NO_VINCULADO,
   MSG_SIN_NOTAS,
@@ -29,6 +30,8 @@ export interface NotasOpciones {
   /** Errores que decide la página (CONSENTIMIENTO_REQUERIDO, PACIENTE_INACTIVO). `true` si los manejó. */
   alError(error: unknown): boolean;
   anunciar(mensaje: string): void;
+  /** D6 (2026-11-25): texto de una nota que no se pudo guardar porque el paciente fue dado de baja. */
+  sinGuardar?: string;
 }
 
 export interface Notas {
@@ -36,6 +39,8 @@ export interface Notas {
   /** Notas ya cargadas y última página pedida (para re-renderizar sin volver a pedirlas, D8). */
   estado(): Pagina<Nota>;
   liberar(): void;
+  /** Lo escrito en "Nueva nota" (`''` en solo lectura). */
+  escrito(): string;
 }
 
 function item(nota: Nota): HTMLElement {
@@ -71,7 +76,20 @@ export function crearNotas(opciones: NotasOpciones): Notas {
     h('p', { className: 'ayuda-campo' }, MSG_NOTAS_INMUTABLES),
   );
 
+  let leerEscrito = (): string => '';
   if (!opciones.soloLectura) element.append(formulario());
+  const pendiente = opciones.sinGuardar ?? '';
+  if (opciones.soloLectura && pendiente.trim() !== '') {
+    element.append(
+      h(
+        'div',
+        { className: 'sin-guardar' },
+        h('p', { className: 'aviso' }, MSG_NO_SE_GUARDO),
+        h('p', {}, 'Nota sin guardar:'),
+        h('p', { className: 'texto-clinico' }, pendiente),
+      ),
+    );
+  }
   element.append(status.element, lista, verMas);
 
   function pintarLista(): void {
@@ -120,6 +138,7 @@ export function crearNotas(opciones: NotasOpciones): Notas {
       rows: 4,
       avisarExceso: true,
     });
+    leerEscrito = () => texto.value();
     const submit = h('button', { attrs: { type: 'submit' } }, 'Agregar nota');
     const form = h(
       'form',
@@ -181,5 +200,6 @@ export function crearNotas(opciones: NotasOpciones): Notas {
     liberar: () => {
       liberada = true;
     },
+    escrito: () => leerEscrito(),
   };
 }

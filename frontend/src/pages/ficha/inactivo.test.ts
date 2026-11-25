@@ -5,7 +5,7 @@ import { PACIENTE_ANA, PACIENTE_INACTIVO, pagina } from '../../api/__fixtures__/
 import { ApiError } from '../../api/errors';
 import { contextoFicha, enviar, montarFicha, seccion, textarea, type Montada } from '../../test-support/ficha';
 import { buttons, flush } from '../../test-support/pages';
-import { MSG_INACTIVO, MSG_SIN_CONSENTIMIENTO } from './mensajes';
+import { MSG_INACTIVO, MSG_NO_SE_GUARDO, MSG_SIN_CONSENTIMIENTO } from './mensajes';
 
 let actual: Montada | null = null;
 
@@ -84,11 +84,86 @@ describe('409 PACIENTE_INACTIVO en una escritura (baja concurrente)', () => {
     enviar(seccion(root, 'Anamnesis')?.querySelector('form') ?? null);
     await flush();
     expect(root.textContent).toContain(MSG_INACTIVO);
-    expect(seccion(root, 'Anamnesis')?.textContent).toContain(FICHA_V3.alergias ?? '');
+    // La vista de solo lectura sigue mostrando lo último confirmado por el servidor…
+    expect(seccion(root, 'Anamnesis')?.querySelector('.anamnesis-lectura')?.textContent).toContain(FICHA_V3.alergias ?? '');
     expect(seccion(root, 'Notas clínicas')?.textContent).toContain('Control de rutina.');
     expect(ctx.ficha.obtenerFicha).toHaveBeenCalledTimes(1);
     expect(ctx.ficha.listarNotas).toHaveBeenCalledTimes(1);
     sinEscritura(root);
+  });
+
+  it('D6: lo escrito en la anamnesis no se descarta: queda visible como texto con el aviso', async () => {
+    const ctx = contextoFicha();
+    ctx.ficha.guardarFicha.mockRejectedValue(INACTIVO());
+    const { root } = await montar({}, ctx);
+    textarea(root, 'alergias').value = 'Penicilina y látex';
+    textarea(root, 'observaciones').value = 'Observación nueva';
+    enviar(seccion(root, 'Anamnesis')?.querySelector('form') ?? null);
+    await flush();
+    const anamnesis = seccion(root, 'Anamnesis');
+    const sinGuardar = anamnesis?.querySelector('.sin-guardar');
+    expect(sinGuardar?.textContent).toContain(MSG_NO_SE_GUARDO);
+    const filas = [...(sinGuardar?.querySelectorAll('dt') ?? [])].map((dt) => [dt.textContent, dt.nextElementSibling?.textContent]);
+    // Solo los campos que cambiaron, con lo escrito tal cual.
+    expect(filas).toEqual([
+      ['Alergias', 'Penicilina y látex'],
+      ['Observaciones', 'Observación nueva'],
+    ]);
+    sinEscritura(root);
+  });
+
+  it('D6: un campo vaciado y el embarazo cambiado también se muestran', async () => {
+    const ctx = contextoFicha();
+    ctx.ficha.guardarFicha.mockRejectedValue(INACTIVO());
+    const { root } = await montar({}, ctx);
+    textarea(root, 'medicacionActual').value = '';
+    const embarazo = root.querySelector('select[name="embarazo"]');
+    if (embarazo instanceof HTMLSelectElement) embarazo.value = 'si';
+    enviar(seccion(root, 'Anamnesis')?.querySelector('form') ?? null);
+    await flush();
+    const filas = [...(seccion(root, 'Anamnesis')?.querySelectorAll('.sin-guardar dt') ?? [])].map((dt) => [
+      dt.textContent,
+      dt.nextElementSibling?.textContent,
+    ]);
+    expect(filas).toEqual([
+      ['Medicación actual', 'Sin dato'],
+      ['Embarazo', 'Sí'],
+    ]);
+  });
+
+  it('D6: lo escrito en "Nueva nota" no se descarta: queda visible como texto con el aviso', async () => {
+    const ctx = contextoFicha();
+    ctx.ficha.crearNota.mockRejectedValue(INACTIVO());
+    const { root } = await montar({}, ctx);
+    textarea(root, 'texto').value = 'Nota que no se pudo guardar.\nSegunda línea.';
+    enviar(seccion(root, 'Notas clínicas')?.querySelector('form') ?? null);
+    await flush();
+    const sinGuardar = seccion(root, 'Notas clínicas')?.querySelector('.sin-guardar');
+    expect(sinGuardar?.textContent).toContain(MSG_NO_SE_GUARDO);
+    expect(sinGuardar?.querySelector('.texto-clinico')?.textContent).toBe('Nota que no se pudo guardar.\nSegunda línea.');
+    sinEscritura(root);
+  });
+
+  it('D6: lo escrito en la otra sección también se conserva (se guardaba la ficha con una nota a medio escribir)', async () => {
+    const ctx = contextoFicha();
+    ctx.ficha.guardarFicha.mockRejectedValue(INACTIVO());
+    const { root } = await montar({}, ctx);
+    textarea(root, 'texto').value = 'Nota a medio escribir';
+    enviar(seccion(root, 'Anamnesis')?.querySelector('form') ?? null);
+    await flush();
+    expect(seccion(root, 'Notas clínicas')?.querySelector('.sin-guardar .texto-clinico')?.textContent).toBe('Nota a medio escribir');
+    // La anamnesis no tenía cambios: no muestra bloque "sin guardar".
+    expect(seccion(root, 'Anamnesis')?.querySelector('.sin-guardar')).toBeNull();
+  });
+
+  it('D6: sin nada escrito no aparece el aviso de "no se pudo guardar"', async () => {
+    const ctx = contextoFicha();
+    ctx.ficha.guardarFicha.mockRejectedValue(INACTIVO());
+    const { root } = await montar({}, ctx);
+    enviar(seccion(root, 'Anamnesis')?.querySelector('form') ?? null);
+    await flush();
+    expect(root.textContent).toContain(MSG_INACTIVO);
+    expect(root.textContent).not.toContain(MSG_NO_SE_GUARDO);
   });
 
   it('al crear una nota: pasa a solo lectura y conserva las notas cargadas', async () => {

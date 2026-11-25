@@ -91,7 +91,11 @@ Contrato real verificado en el código (`paciente/abm`, `paciente/ficha`, `secur
   - Sin consentimiento previo, se ve "Sin consentimiento registrado" y nada más.
 - `409 PACIENTE_INACTIVO` en una escritura (baja concurrente) cambia la página a ese modo.
   - **Precisión de la tarea 5.6**: el cambio usa lo que ya está en memoria (la última ficha confirmada por el servidor y las notas cargadas), sin volver a pedirlo (D8).
-  - Lo escrito sin guardar se descarta, porque el paciente ya no admite escrituras.
+  - **A-D6 (pedido por la persona, 2026-11-25, reemplaza la regla anterior que lo descartaba)**: lo escrito sin guardar **no se descarta**. Queda visible en solo lectura, como texto, con el aviso "No se pudo guardar: el paciente fue dado de baja.".
+    - En la anamnesis se muestran solo los campos que difieren de la última ficha del servidor (un campo vaciado aparece como "Sin dato").
+    - En las notas se muestra el texto de "Nueva nota" como "Nota sin guardar:".
+    - Vale para las dos secciones, venga el 409 de una o de la otra.
+    - Sin nada escrito, no aparece el aviso.
   - Leer sigue permitido: "Ver más" funciona en solo lectura.
   - Si el 409 llega al registrar el consentimiento, se muestra el aviso y "Sin consentimiento registrado.".
 

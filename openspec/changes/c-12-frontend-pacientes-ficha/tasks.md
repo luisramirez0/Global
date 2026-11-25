@@ -244,6 +244,14 @@
 > - R3: `puedeVerFicha` incluye RECEPCION (4).
 > - R4: sin el control de rol en la página (4).
 
+> **Cambio de D6 en la 5.6 (pedido por la persona, 2026-11-25).** Ante un `409 PACIENTE_INACTIVO`, lo escrito **no se descarta**: queda visible en solo lectura con "No se pudo guardar: el paciente fue dado de baja.".
+> - Tests: 5 nuevos en `inactivo.test.ts` (anamnesis, campo vaciado y embarazo, nota, la otra sección, sin nada escrito). RED real 4/5; el de "sin nada escrito" ya pasaba.
+> - Mutación: mueren los 4.
+>   - U1: se descarta lo escrito (4 tests).
+>   - U2: la anamnesis no lo muestra (2).
+>   - U3: las notas no lo muestran (2).
+>   - U4: muestra todos los campos y no solo los cambiados (4).
+
 - [ ] 5.8 RED: **higiene** (D8):
   - `dispose` y respuesta tardía.
   - Título fijo.

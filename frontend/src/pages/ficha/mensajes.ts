@@ -19,6 +19,7 @@ export const MSG_CONSENTIMIENTO_REQUERIDO = 'Falta el consentimiento del pacient
 export const MSG_SIN_CONSENTIMIENTO = 'Sin consentimiento registrado.';
 
 export const MSG_INACTIVO = 'Paciente dado de baja: la historia clínica es de solo lectura.';
+export const MSG_NO_SE_GUARDO = 'No se pudo guardar: el paciente fue dado de baja.';
 
 export const MSG_FICHA_GUARDADA = 'Ficha guardada.';
 export const MSG_FICHA_DESACTUALIZADA = 'Otra persona modificó la ficha. Tus cambios no se guardaron.';

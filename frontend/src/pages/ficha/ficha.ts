@@ -25,7 +25,7 @@ import {
   tieneCodigo,
 } from './mensajes';
 import { NOTAS_POR_PAGINA, crearNotas, type Notas } from './notas';
-import { validarAceptacion } from './validacion';
+import { validarAceptacion, type ValoresFicha } from './validacion';
 
 /**
  * Ficha clínica del paciente (C-12b, design D4–D8). Bloqueo por consentimiento (RN-DS-03): mientras el paciente no
@@ -282,7 +282,13 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
   }
 
   /** Crea anamnesis y notas; en solo lectura si el paciente está dado de baja (D6). */
-  function pintarClinico(clinico: HTMLElement, pacienteId: number, ficha: Ficha, notas: Pagina<Nota>): void {
+  function pintarClinico(
+    clinico: HTMLElement,
+    pacienteId: number,
+    ficha: Ficha,
+    notas: Pagina<Nota>,
+    sinGuardar: { ficha: ValoresFicha | null; nota: string } = { ficha: null, nota: '' },
+  ): void {
     clear(clinico);
     liberarClinico();
     const anunciar = (mensaje: string): void => {
@@ -292,6 +298,7 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
     anamnesis = crearAnamnesis({
       ficha,
       soloLectura: !activo,
+      sinGuardar: sinGuardar.ficha,
       guardar: (request) => ctx.ficha.guardarFicha(pacienteId, request),
       recargar: () => ctx.ficha.obtenerFicha(pacienteId),
       alError: errorClinico,
@@ -300,6 +307,7 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
     notasClinicas = crearNotas({
       inicial: notas,
       soloLectura: !activo,
+      sinGuardar: sinGuardar.nota,
       listar: (page) => ctx.ficha.listarNotas(pacienteId, page, NOTAS_POR_PAGINA),
       crear: (texto) => ctx.ficha.crearNota(pacienteId, texto),
       alError: errorClinico,
@@ -330,13 +338,14 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
 
   /**
    * 409 PACIENTE_INACTIVO en una escritura (baja concurrente, D6): se re-pinta en solo lectura con lo que ya está en
-   * memoria (última ficha confirmada y notas cargadas), sin volver a pedirlo (D8). Lo escrito sin guardar se descarta:
-   * ya no se puede guardar.
+   * memoria (última ficha confirmada y notas cargadas), sin volver a pedirlo (D8). Lo escrito sin guardar NO se
+   * descarta: queda visible como texto con "No se pudo guardar: el paciente fue dado de baja." (D6, 2026-11-25).
    */
   function pasarASoloLectura(): void {
     activo = false;
     const ficha = anamnesis?.actual();
     const notas = notasClinicas?.estado();
+    const sinGuardar = { ficha: anamnesis?.escrito() ?? null, nota: notasClinicas?.escrito() ?? '' };
     const consentimiento = consentimientoActual;
     if (id === undefined || ficha === undefined || notas === undefined || consentimiento === null) {
       iniciar();
@@ -345,7 +354,7 @@ export function renderFicha(ctx: PageContext, params: RouteParams): Page {
     gen++;
     estado.textContent = '';
     alerta.clear();
-    pintarClinico(cabeceraClinica(consentimiento), id, ficha, notas);
+    pintarClinico(cabeceraClinica(consentimiento), id, ficha, notas, sinGuardar);
   }
 
   /** 409 CONSENTIMIENTO_REQUERIDO (p. ej. una carrera): se descartan los datos clínicos y se vuelve al bloqueo. */

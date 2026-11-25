@@ -18,6 +18,7 @@ import {
   MSG_FICHA_ACTUALIZADA,
   MSG_FICHA_DESACTUALIZADA,
   MSG_FICHA_GUARDADA,
+  MSG_NO_SE_GUARDO,
   MSG_SIN_DATO,
   mensajeDeError,
   tieneCodigo,
@@ -47,6 +48,11 @@ export interface AnamnesisOpciones {
   alError(error: unknown): boolean;
   /** Avisos de éxito (región `role="status"` de la página). */
   anunciar(mensaje: string): void;
+  /**
+   * D6 (2026-11-25): lo que se había escrito y no se pudo guardar porque el paciente fue dado de baja. En solo lectura
+   * se muestra como texto, con un aviso, en lugar de descartarlo.
+   */
+  sinGuardar?: ValoresFicha | null;
 }
 
 export interface Anamnesis {
@@ -55,6 +61,8 @@ export interface Anamnesis {
   actual(): Ficha;
   /** Deja de reaccionar a respuestas pendientes (la página se fue o se re-renderiza). */
   liberar(): void;
+  /** Lo escrito en el formulario (`null` en solo lectura). */
+  escrito(): ValoresFicha | null;
 }
 
 export function textoEmbarazo(valor: boolean | null): string {
@@ -65,6 +73,47 @@ export function textoEmbarazo(valor: boolean | null): string {
 function embarazoAValor(valor: boolean | null): string {
   if (valor === null) return '';
   return valor ? 'si' : 'no';
+}
+
+function embarazoDeValor(valor: string): boolean | null {
+  if (valor === 'si') return true;
+  if (valor === 'no') return false;
+  return null;
+}
+
+/** Campos escritos que difieren de la ficha del servidor, con el valor a mostrar (D6). */
+function cambios(ficha: Ficha, escrito: ValoresFicha): [string, string][] {
+  const result: [string, string][] = [];
+  const orden = [
+    'alergias',
+    'medicacionActual',
+    'antecedentesMedicos',
+    'enfermedadesRelevantes',
+    'embarazo',
+    'motivoConsulta',
+    'observaciones',
+  ] as const;
+  for (const campo of orden) {
+    if (campo === 'embarazo') {
+      const valor = embarazoDeValor(escrito.embarazo);
+      if (valor !== ficha.embarazo) result.push([ETIQUETAS_ANAMNESIS.embarazo, textoEmbarazo(valor)]);
+      continue;
+    }
+    const valor = escrito[campo].trim() === '' ? null : escrito[campo];
+    if (valor !== ficha[campo]) result.push([ETIQUETAS_ANAMNESIS[campo], valor ?? MSG_SIN_DATO]);
+  }
+  return result;
+}
+
+function bloqueSinGuardar(ficha: Ficha, escrito: ValoresFicha): HTMLElement | null {
+  const filas = cambios(ficha, escrito);
+  if (filas.length === 0) return null;
+  return h(
+    'div',
+    { className: 'sin-guardar' },
+    h('p', { className: 'aviso' }, MSG_NO_SE_GUARDO),
+    h('dl', {}, ...filas.flatMap(([dt, dd]) => [h('dt', {}, dt), h('dd', { className: 'texto-clinico' }, dd)])),
+  );
 }
 
 function actualizacion(ficha: Ficha): string {
@@ -102,8 +151,9 @@ export function crearAnamnesis(opciones: AnamnesisOpciones): Anamnesis {
   const element = h('section', { className: 'anamnesis', attrs: { 'aria-labelledby': titulo.id } }, titulo, meta);
 
   if (opciones.soloLectura) {
-    element.append(vistaLectura(ficha));
-    return { element, actual: () => ficha, liberar: () => (liberada = true) };
+    const pendiente = opciones.sinGuardar ? bloqueSinGuardar(ficha, opciones.sinGuardar) : null;
+    element.append(pendiente ?? '', vistaLectura(ficha));
+    return { element, actual: () => ficha, liberar: () => (liberada = true), escrito: () => null };
   }
 
   /** Versión con la que se guarda: la leída o la última confirmada; nunca cambia por un 409. */
@@ -256,5 +306,6 @@ export function crearAnamnesis(opciones: AnamnesisOpciones): Anamnesis {
     liberar: () => {
       liberada = true;
     },
+    escrito: leer,
   };
 }
