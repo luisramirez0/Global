@@ -93,6 +93,13 @@ main {
   display: none;
 }
 
+/* Ayuda bajo un campo (C-12), p. ej. el formato del teléfono. */
+.ayuda-campo {
+  margin: 0.25rem 0 0;
+  color: #4a4a4a;
+  font-size: 0.875rem;
+}
+
 .aviso {
   padding: 0.5rem 1rem;
   background: #fff4ce;

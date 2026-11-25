@@ -218,3 +218,48 @@ describe('rutas de pacientes con id inválido (C-12, A-D1)', () => {
     expect(fetchFn).not.toHaveBeenCalled();
   });
 });
+
+describe('pacientes (C-12a)', () => {
+  it('el menú ofrece "Pacientes" a #/pacientes', async () => {
+    storeSession();
+    window.history.replaceState(null, '', '#/inicio');
+    await mount(vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK))).ready;
+    const link = document.querySelector('nav[aria-label="Principal"] a[href="#/pacientes"]');
+    expect(link?.textContent).toBe('Pacientes');
+  });
+
+  it.each([
+    ['#/pacientes', 'Pacientes'],
+    ['#/pacientes/nuevo', 'Nuevo paciente'],
+    ['#/pacientes/7', 'Paciente'],
+  ])('con sesión %s renderiza la página "%s"', async (hash, titulo) => {
+    storeSession();
+    window.history.replaceState(null, '', hash);
+    await mount(vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK))).ready;
+    expect(window.location.hash).toBe(hash);
+    expect(main().querySelector('h1')?.textContent).toBe(titulo);
+    expect(document.title).toBe(`${titulo} · Global`);
+  });
+
+  it.each(['#/pacientes', '#/pacientes/nuevo', '#/pacientes/7'])('sin sesión %s va a login sin requests', async (hash) => {
+    window.history.replaceState(null, '', hash);
+    const fetchFn = vi.fn<typeof fetch>();
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/login');
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+});
+
+describe('ficha no registrada en C-12a (tasks 3.4; la reemplaza C-12b)', () => {
+  it.each(['#/pacientes/5/ficha', '#/pacientes/1/ficha'])(
+    'con sesión ADMIN %s es ruta desconocida: va a inicio y solo se pidió el me() del arranque',
+    async (hash) => {
+      storeSession();
+      window.history.replaceState(null, '', hash);
+      const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ME_OK));
+      await mount(fetchFn).ready;
+      expect(window.location.hash).toBe('#/inicio');
+      expect(fetchFn.mock.calls.map((c) => String(c[0]))).toEqual(['http://api.test/api/auth/me']);
+    },
+  );
+});

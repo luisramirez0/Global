@@ -7,6 +7,8 @@ import { renderSillones } from '../pages/config/sillones';
 import type { PageContext } from '../pages/context';
 import { renderInicio } from '../pages/inicio/inicio';
 import { renderLogin } from '../pages/login/login';
+import { renderNuevoPaciente, renderPaciente } from '../pages/pacientes/formulario';
+import { renderPacientes } from '../pages/pacientes/lista';
 import { renderRegistro } from '../pages/registro/registro';
 import type { Route } from './router';
 
@@ -26,9 +28,14 @@ export const ROUTES: readonly Route<PageContext>[] = [
   { path: '/config/prestaciones', render: renderPrestaciones },
   { path: '/config/horarios', render: renderHorarios },
   { path: '/config/bloqueos', render: renderBloqueos },
+  // Pacientes (C-12a). La ruta de la ficha se registra en C-12b.
+  { path: '/pacientes', render: renderPacientes },
+  { path: '/pacientes/nuevo', render: renderNuevoPaciente },
+  { path: '/pacientes/:id', render: renderPaciente },
 ];
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { path: HOME_PATH, label: 'Inicio' },
+  { path: '/pacientes', label: 'Pacientes' },
   { path: CONFIG_HOME, label: 'Configuración' },
 ];

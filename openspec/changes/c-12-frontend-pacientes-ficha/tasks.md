@@ -45,14 +45,21 @@
 
 ## 3. Infraestructura compartida
 
-- [ ] 3.1 RED: `components/form.test.ts`: `createTextAreaField` (label, `maxLength`, error accesible con `aria-invalid`/`aria-describedby`); `applyFieldErrors` enfoca una textarea; `FieldOptions.maxLength`. GREEN: `components/form.ts`. La textarea se usa en C-12b; queda en C-12a por ser infraestructura compartida y aditiva.
-- [ ] 3.2 RED: `pages/permisos.test.ts`: `puedeDarDeBaja` para los 3 roles y sin perfil. GREEN: `pages/permisos.ts`, más el re-export de `rolActual` desde `pages/config/permisos.ts`.
-- [ ] 3.3 `PageContext.pacientes`, creado en `app.ts` con el mismo `http`. `test-support/pages.ts` gana `PacientesMock`. En `routes.ts`, **solo** `/pacientes`, `/pacientes/nuevo` y `/pacientes/:id`, más el ítem "Pacientes" (casos nuevos en `routes.test.ts` y `app.test.ts`).
-- [ ] 3.4 **Ficha no registrada** (C-12a). RED en `app.test.ts`, caso nuevo: con sesión ADMIN, `#/pacientes/5/ficha` → `#/inicio` (ruta desconocida). El `fetch` simulado no recibe ninguna request además del `me()` del arranque: nada a `/api/pacientes/…` ni a `/api/consentimientos/…`. En `routes.test.ts`: ninguna ruta de `ROUTES` coincide con `/pacientes/5/ficha`. C-12b reemplaza este caso (5.9).
+- [x] 3.1 (15/15 en `form.test.ts`; también `type: 'tel'` y `hint`, la ayuda accesible que usa el teléfono en 4.5) RED: `components/form.test.ts`: `createTextAreaField` (label, `maxLength`, error accesible con `aria-invalid`/`aria-describedby`); `applyFieldErrors` enfoca una textarea; `FieldOptions.maxLength`. GREEN: `components/form.ts`. La textarea se usa en C-12b; queda en C-12a por ser infraestructura compartida y aditiva.
+- [x] 3.2 (C-11 sin cambios de comportamiento: 115/115 en `pages/config` y permisos) RED: `pages/permisos.test.ts`: `puedeDarDeBaja` para los 3 roles y sin perfil. GREEN: `pages/permisos.ts`, más el re-export de `rolActual` desde `pages/config/permisos.ts`.
+- [x] 3.3 (reordenada: `PageContext.pacientes` y `PacientesMock` pasan a 4.1, donde existe el cliente; las rutas apuntan a esqueletos de página con solo el `h1` y el título fijo, que 4.4 y 4.5 completan con TDD. Mutación hecha: ver nota) En `routes.ts`, **solo** `/pacientes`, `/pacientes/nuevo` y `/pacientes/:id`, más el ítem "Pacientes" (casos nuevos en `routes.test.ts` y `app.test.ts`).
+- [x] 3.4 **Ficha no registrada** (C-12a). RED en `app.test.ts`, caso nuevo: con sesión ADMIN, `#/pacientes/5/ficha` → `#/inicio` (ruta desconocida). El `fetch` simulado no recibe ninguna request además del `me()` del arranque: nada a `/api/pacientes/…` ni a `/api/consentimientos/…`. En `routes.test.ts`: ninguna ruta de `ROUTES` coincide con `/pacientes/5/ficha`. C-12b reemplaza este caso (5.9).
+
+> **Nota de mutación (3.3, 2026-11-24).** Con `/pacientes/:id` registrada, se alteró temporalmente `parseParam` en `router.ts` y se restauró desde el commit (`git diff` vacío). Resultados:
+> - **M1, sin validación** (`return Number(value)`): fallan los 5 casos con sesión de 2.2 (`abc`, `-1`, `0`, `01`, `1.5`); 19 fallas en total sumando `router.test.ts`.
+> - **M2, sin la regex**: fallan `-1`, `0` y `01`. `abc` y `1.5` los sigue frenando `isSafeInteger`.
+> - **M3, sin `isSafeInteger`**: al principio solo fallaban 2 casos de `router.test.ts`. Por eso se sumó `#/pacientes/9007199254740993` a 2.2, que ahora también falla.
+>
+> Los casos sin sesión de 2.2 no detectan mutantes: el guard manda a `#/login` antes de mirar el id. Es esperado.
 
 ## 4. Pacientes
 
-- [ ] 4.1 RED: `api/pacientes.test.ts`: método, ruta, query (`q` codificado, `incluirInactivos`, `page`, `size`), cuerpo y `auth` de las 6 operaciones; `204` en baja y reactivación; id inválido → sin request. GREEN: `api/pacientes.ts`.
+- [ ] 4.1 (incluye `PageContext.pacientes` en `app.ts` con el mismo `http` y `PacientesMock` en `test-support/pages.ts`, movidos desde 3.3) RED: `api/pacientes.test.ts`: método, ruta, query (`q` codificado, `incluirInactivos`, `page`, `size`), cuerpo y `auth` de las 6 operaciones; `204` en baja y reactivación; id inválido → sin request. GREEN: `api/pacientes.ts`.
 - [ ] 4.2 RED: decodificadores de `Paciente` y `Pagina<T>`: faltantes, `activo` no booleano, `fechaNacimiento` no `YYYY-MM-DD`, `totalPaginas` negativo → `unexpected`. GREEN: `api/decoders.ts`, `api/types.ts`, fixtures en `api/__fixtures__/pacientes.ts`.
 - [ ] 4.3 RED: `pages/pacientes/validacion.test.ts`, ≥ 2 casos por regla de D9 (DNI con puntos y espacios, E.164, email, fecha futura con `hoyEnZona`, largos). GREEN: `validacion.ts` y `mensajes.ts`.
 - [ ] 4.4 RED: `pages/pacientes/lista.test.ts`:
@@ -92,6 +99,12 @@
 - [ ] 7a.1 `npm test`, `npm run lint`, `npm run typecheck` y `npm run build` limpios; anotar conteos y tamaño del bundle.
 - [ ] 7a.2 `grep` en `frontend/src` fuera de los tests: `innerHTML|outerHTML|insertAdjacentHTML|localStorage|console\.|: any|as any` sin resultados; `sessionStorage` solo en `state/session.ts`.
 - [ ] 7a.3 `git diff main -- backend` vacío; tests de rutas exactas existentes sin cambios (2.3); `grep -rn "/ficha" frontend/src --include=*.ts --exclude=*.test.ts` sin resultados (solo lo mencionan los tests de 3.4 y 4.4).
+- [ ] 7a.3b **Sin esqueletos**: ninguna página de pacientes queda como el esqueleto de 3.3, con solo el `h1`.
+  - Por fuente: ningún "Esqueleto de la tarea 3.3" en `src/pages/pacientes/`.
+  - Por test: en `app.test.ts`, con sesión y la API simulada, cada ruta muestra más que el `h1`:
+    - `#/pacientes`: formulario de búsqueda y tabla o estado vacío.
+    - `#/pacientes/nuevo`: `<form>` con los campos de D9.
+    - `#/pacientes/7`: formulario con los datos o "Paciente no encontrado".
 - [ ] 7a.4 Guía de verificación manual de pacientes para la persona (contra la API real, ADMIN y RECEPCION):
   - ABM y búsqueda con acentos.
   - DNI duplicado.

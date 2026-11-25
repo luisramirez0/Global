@@ -104,6 +104,13 @@ Contrato real verificado en el código (`paciente/abm`, `paciente/ficha`, `secur
 - `components/form.ts` (aditivo):
   - `createTextAreaField` (`FormControl` con label, error accesible `aria-describedby`/`aria-invalid` y `maxLength`).
   - `FieldOptions.maxLength`.
+  - **Agregados en la tarea 3.1** (no estaban en el plan original; los necesita el teléfono de D9):
+    - `FieldOptions.type: 'tel'`.
+    - `FieldOptions.hint`: ayuda visible como texto, en un `<p id="<id>-hint">`, siempre presente en `aria-describedby`. Al marcar un error queda `"<id>-hint <id>-error"`; al limpiarlo, solo la ayuda. Sin `hint`, el campo se comporta exactamente como en C-10.
+    - Tests propios en `components/form.test.ts`:
+      - `type 'tel'`: tipo, `autocomplete` e `inputmode` opcional.
+      - `hint`: texto y `aria-describedby`; combinación con el error; ayuda maliciosa como texto literal.
+      - Sin `hint`: ni párrafo de ayuda ni `aria-describedby`.
   - Login, registro y C-11 no cambian.
 - Validación local (`pages/pacientes/validacion.ts` y `pages/ficha/validacion.ts`):
   - Nombre y apellido obligatorios (máximo 100).
