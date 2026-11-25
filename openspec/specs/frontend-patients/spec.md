@@ -1,7 +1,13 @@
-## ADDED Requirements
+# frontend-patients Specification
+
+## Purpose
+
+Permitir que los tres roles busquen, den de alta y editen pacientes desde la SPA, y que `ADMIN` y `PROFESIONAL` los den de baja o los reactiven, con validación equivalente a la del backend, el DNI duplicado enlazado al paciente existente y los datos personales siempre como texto, fuera del almacenamiento del navegador.
+
+## Requirements
 
 ### Requirement: Cliente de pacientes tipado
-El frontend SHALL ofrecer un cliente tipado sobre el `HttpClient` autenticado para `GET /api/pacientes` (`q`, `incluirInactivos`, `page`, `size`), `GET /api/pacientes/{id}`, `POST /api/pacientes`, `PUT /api/pacientes/{id}`, `DELETE /api/pacientes/{id}` y `POST /api/pacientes/{id}/reactivar`. Cada respuesta MUST validarse con un decodificador (incluido `Pagina<T>`). Un id que no sea entero positivo MUST rechazarse sin hacer la request.
+El frontend SHALL ofrecer un cliente tipado sobre el `HttpClient` autenticado para `GET /api/pacientes` (`q`, `incluirInactivos`, `page`, `size`), `GET /api/pacientes/{id}`, `POST /api/pacientes`, `PUT /api/pacientes/{id}`, `DELETE /api/pacientes/{id}` y `POST /api/pacientes/{id}/reactivar`. Cada respuesta MUST validarse con un decodificador (incluido `Pagina<T>`). Un id que no sea entero positivo MUST rechazarse sin hacer la request. Es el mismo cliente compartido de `frontend-api-client` (*Cliente de pacientes compartido*, C-13), ampliado con el ABM: `page` y `size` son opcionales y, si vienen, MUST ser válidos (un valor inválido es un error de programación sin request), y un `q` vacío o de solo espacios MUST NOT enviarse.
 
 #### Scenario: Búsqueda con parámetros
 - **WHEN** se busca `q = "pér"` con inactivos en la página 1

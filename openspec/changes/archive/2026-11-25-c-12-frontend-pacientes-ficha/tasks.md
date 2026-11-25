@@ -150,7 +150,7 @@
   13. Crear un paciente llamado `<img src=x onerror=alert(1)>`: se ve como texto en la lista y en el detalle, y no aparece ningún `alert`.
 > **Prueba manual de C-12a (7a.4), resultado informado por la persona el 2026-11-25**: OK los pasos 1 a 19, salvo el paso 17 con RECEPCION, que no se confirmó explícitamente.
 
-- [ ] 7a.5 (handoff y `[x]` hechos con C-12b; push y PR siguen pendientes de autorización) **Sin handoff ni `[x]` en CHANGES.md** (van con C-12b). Commit, push y PR solo con autorización de la persona (regla 10), avisando a integrante-1/2 (regla 12). La descripción del PR aclara que C-12 sigue abierto.
+- [x] 7a.5 (handoff y `[x]` hechos con C-12b; C-12a y C-12b fueron en un solo PR, PR #27 (merge `32708ba`), autorizado por la persona) **Sin handoff ni `[x]` en CHANGES.md** (van con C-12b). Commit, push y PR solo con autorización de la persona (regla 10), avisando a integrante-1/2 (regla 12). La descripción del PR aclara que C-12 sigue abierto.
 
 ---
 
@@ -380,4 +380,16 @@
       - todos con `entidad_id` = id del paciente;
       - **ninguna** fila por los intentos de RECEPCION.
 - [x] 7b.5 Handoff `knowledge-base/entrega/C-12.md` (cubre C-12a y C-12b). Deuda: autor por id, sin `version` en paciente, respuestas tardías no abortadas.
-- [x] 7b.6 (`[x]` en `CHANGES.md` §C-12 con la evidencia y los pasos manuales no probados; commit hecho, **push y PR pendientes de autorización**) Tras la verificación manual de la persona: `[x]` en `CHANGES.md` §C-12 con evidencia. Commit, push y PR solo con autorización (regla 10), avisando a integrante-1/2 (regla 12). Archivo del change y sincronización de specs después del merge de C-12b.
+- [x] 7b.6 (`[x]` en `CHANGES.md` §C-12 con la evidencia y los pasos manuales no probados; mergeado en PR #27 (merge `32708ba`)) Tras la verificación manual de la persona: `[x]` en `CHANGES.md` §C-12 con evidencia. Commit, push y PR solo con autorización (regla 10), avisando a integrante-1/2 (regla 12). Archivo del change y sincronización de specs después del merge de C-12b.
+
+## Archivo (2026-11-25)
+
+- [x] Mergeado en `main` en PR #27 (merge `32708ba`), después de integrar `origin/main` (C-13, C-14, C-15, C-09) en la rama (`76c48a0`). Frontend 1987/1987 en 84 archivos.
+- [x] Change archivado en `openspec/changes/archive/2026-11-25-c-12-frontend-pacientes-ficha`.
+- [x] Specs sincronizadas a mano, porque el CLI de OpenSpec no está instalado en esta máquina:
+  - **Nuevas**: `frontend-patients` (7 requisitos) y `frontend-clinical-record` (7).
+  - **`frontend-shell`**: "Rutas por hash" reemplazado por el delta, ya rebasado sobre el texto de C-13 en el merge. "Navegación a pacientes" agregado.
+  - **`frontend-api-client`**: "Errores tipados de la API" **rebasado sobre el texto actual de `main`**, que C-13 había compactado. Se conserva "aun con detalle de conflicto" y se suman `codigo`/`pacienteId` y sus 3 escenarios. El delta archivado se actualizó para quedar igual a lo sincronizado.
+  - `frontend-patients` › *Cliente de pacientes tipado* aclara que es el mismo cliente compartido de `frontend-api-client` (C-13), ampliado con el ABM.
+- [ ] **Siguen pendientes**: los pasos manuales no probados de C-12b (9, 10 a 12, 16, 17 a 19 y 24) y el paso 17 de C-12a con RECEPCION. También, coordinar con C-15 el montaje del export en la ficha. Ver el handoff.
+
