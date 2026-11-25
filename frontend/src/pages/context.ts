@@ -1,4 +1,5 @@
 import type { AgendaConfigApi } from '../api/agendaConfig';
+import type { AuditoriaApi } from '../api/auditoria';
 import type { AuthApi } from '../api/auth';
 import type { PacientesApi } from '../api/pacientes';
 import type { TurnosApi } from '../api/turnos';
@@ -13,6 +14,8 @@ export interface PageContext {
   turnos: TurnosApi;
   /** Pacientes (C-05); C-12 lo amplía con alta, edición y baja. */
   pacientes: PacientesApi;
+  /** Log de auditoría y export de pacientes (C-15). */
+  auditoria: AuditoriaApi;
   session: Session;
   navigate(path: string): void;
   flash: Flash;

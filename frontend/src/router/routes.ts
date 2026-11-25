@@ -1,4 +1,5 @@
 import type { NavItem } from '../components/layout';
+import { renderAuditoria } from '../pages/auditoria/auditoria';
 import { renderBloqueos } from '../pages/config/bloqueos';
 import { renderHorarios } from '../pages/config/horarios';
 import { CONFIG_HOME } from '../pages/config/nav';
@@ -27,6 +28,8 @@ export const ROUTES: readonly Route<PageContext>[] = [
   { path: '/config/prestaciones', render: renderPrestaciones },
   { path: '/config/horarios', render: renderHorarios },
   { path: '/config/bloqueos', render: renderBloqueos },
+  // Auditoría y export de datos de pacientes (C-15).
+  { path: '/auditoria', render: renderAuditoria },
 ];
 
 /** Redirecciones explícitas de rutas retiradas (marcadores viejos). El router las aplica antes del guard. */
@@ -35,4 +38,5 @@ export const REDIRECTS: ReadonlyMap<string, string> = new Map([['/inicio', HOME_
 export const NAV_ITEMS: readonly NavItem[] = [
   { path: HOME_PATH, label: 'Agenda' },
   { path: CONFIG_HOME, label: 'Configuración' },
+  { path: '/auditoria', label: 'Auditoría', roles: ['ADMIN', 'PROFESIONAL'] },
 ];

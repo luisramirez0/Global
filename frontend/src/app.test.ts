@@ -295,16 +295,23 @@ describe('7.2 la agenda es la entrada (HOME_PATH = /agenda)', () => {
 });
 
 describe('7.2 roles y menú', () => {
-  it.each(['ADMIN', 'PROFESIONAL', 'RECEPCION'] as const)('%s llega a #/agenda y ve "Agenda" y "Configuración", sin "Inicio"', async (rol) => {
+  const BASE = [
+    ['Agenda', '#/agenda'],
+    ['Configuración', '#/config/sillones'],
+  ];
+  const CON_AUDITORIA = [...BASE, ['Auditoría', '#/auditoria']];
+
+  it.each([
+    ['ADMIN', CON_AUDITORIA],
+    ['PROFESIONAL', CON_AUDITORIA],
+    ['RECEPCION', BASE],
+  ] as const)('%s llega a #/agenda y ve "Agenda" y "Configuración" (y "Auditoría" según C-15), sin "Inicio"', async (rol, esperados) => {
     storeSession();
     window.history.replaceState(null, '', '#/agenda');
     await mount(apiFalsa(meConRol(rol))).ready;
     expect(main().querySelector('h1')?.textContent).toBe('Agenda');
     const enlaces = [...document.querySelectorAll('nav[aria-label="Principal"] a')].map((a) => [a.textContent, a.getAttribute('href')]);
-    expect(enlaces).toEqual([
-      ['Agenda', '#/agenda'],
-      ['Configuración', '#/config/sillones'],
-    ]);
+    expect(enlaces).toEqual(esperados);
     expect(document.querySelector('nav')?.textContent).not.toContain('Inicio');
   });
 
@@ -351,5 +358,44 @@ describe('7.2 roles y menú', () => {
     const llamada = fetchFn.mock.calls.find((c) => String(c[0]).includes('/turnos'));
     expect(String(llamada?.[0]).startsWith('http://api.test/api/turnos?desde=')).toBe(true);
     expect(new Headers(llamada?.[1]?.headers).get('Authorization')).toBe('Bearer t1');
+  });
+});
+
+describe('auditoría (C-15)', () => {
+  const PAGINA_VACIA = { contenido: [], pagina: 0, tamanio: 20, totalElementos: 0, totalPaginas: 0 };
+
+  it('ADMIN ve "Auditoría" en el menú y la pantalla pide el log con el token', async () => {
+    storeSession();
+    window.history.replaceState(null, '', '#/auditoria');
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(200, ME_OK))
+      .mockResolvedValueOnce(jsonResponse(200, PAGINA_VACIA));
+    await mount(fetchFn).ready;
+    const link = document.querySelector('nav[aria-label="Principal"] a[href="#/auditoria"]');
+    expect(link?.textContent).toBe('Auditoría');
+    expect(main().querySelector('h1')?.textContent).toBe('Auditoría');
+    await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(2));
+    expect(fetchFn.mock.calls[1]?.[0]).toBe('http://api.test/api/auditoria?page=0');
+    expect(new Headers(fetchFn.mock.calls[1]?.[1]?.headers).get('Authorization')).toBe('Bearer t1');
+  });
+
+  it('RECEPCION no ve el ítem y, si entra por URL, no se pide el log', async () => {
+    storeSession();
+    window.history.replaceState(null, '', '#/auditoria');
+    const recepcion = { ...ME_OK, usuario: { ...ME_OK.usuario, rol: 'RECEPCION' } };
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(200, recepcion));
+    await mount(fetchFn).ready;
+    expect(document.querySelector('nav[aria-label="Principal"] a[href="#/auditoria"]')).toBeNull();
+    expect(main().textContent).toContain('Tu rol no tiene acceso a la auditoría.');
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin sesión #/auditoria redirige al login sin pedir datos', async () => {
+    window.history.replaceState(null, '', '#/auditoria');
+    const fetchFn = vi.fn<typeof fetch>();
+    await mount(fetchFn).ready;
+    expect(window.location.hash).toBe('#/login');
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 });

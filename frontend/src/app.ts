@@ -1,5 +1,6 @@
 import { API_BASE_URL } from './api/config';
 import { createAgendaConfigApi } from './api/agendaConfig';
+import { createAuditoriaApi } from './api/auditoria';
 import { createAuthApi } from './api/auth';
 import { createHttpClient } from './api/http';
 import { createPacientesApi } from './api/pacientes';
@@ -50,13 +51,14 @@ export function mountApp(doc: Document, title: string = DEFAULT_TITLE, deps: Par
   const agenda = createAgendaConfigApi(http);
   const turnos = createTurnosApi(http);
   const pacientes = createPacientesApi(http);
+  const auditoria = createAuditoriaApi(http);
   const flash = createFlash();
 
   const layout = createLayout({ appName: title, navItems: NAV_ITEMS, onLogout: () => session.end('logout') });
   root.replaceChildren(layout.root);
 
   let router: Router | null = null;
-  const context: PageContext = { api, agenda, turnos, pacientes, session, flash, navigate: (path) => router?.navigate(path) };
+  const context: PageContext = { api, agenda, turnos, pacientes, auditoria, session, flash, navigate: (path) => router?.navigate(path) };
   router = createRouter({
     win,
     outlet: layout.main,

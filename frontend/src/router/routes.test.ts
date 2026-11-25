@@ -42,18 +42,31 @@ describe('la agenda como entrada (C-13, D10)', () => {
     }
   });
 
-  it('el menú principal es Agenda y Configuración, en ese orden y sin Inicio', () => {
+  it('el menú principal es Agenda, Configuración y Auditoría (C-15), en ese orden y sin Inicio', () => {
     expect(NAV_ITEMS).toEqual([
       { path: '/agenda', label: 'Agenda' },
       { path: '/config/sillones', label: 'Configuración' },
+      { path: '/auditoria', label: 'Auditoría', roles: ['ADMIN', 'PROFESIONAL'] },
     ]);
   });
 
   it('regresión: las rutas previas siguen registradas y solo login y registro son para invitados', () => {
     expect(ROUTES.map((r) => r.path).sort()).toEqual(
-      ['/agenda', '/config/bloqueos', '/config/horarios', '/config/prestaciones', '/config/sillones', '/login', '/registro'].sort(),
+      ['/agenda', '/auditoria', '/config/bloqueos', '/config/horarios', '/config/prestaciones', '/config/sillones', '/login', '/registro'].sort(),
     );
     expect(ROUTES.filter((r) => r.guestOnly === true).map((r) => r.path).sort()).toEqual(['/login', '/registro']);
     expect(new Set(ROUTES.map((r) => r.path)).size).toBe(ROUTES.length);
+  });
+});
+
+describe('ruta de auditoría (C-15)', () => {
+  it('es una ruta protegida registrada', () => {
+    const route = ROUTES.find((r) => r.path === '/auditoria');
+    expect(route).toBeDefined();
+    expect(route?.guestOnly).not.toBe(true);
+  });
+
+  it('el menú la ofrece solo a ADMIN y PROFESIONAL', () => {
+    expect(NAV_ITEMS).toContainEqual({ path: '/auditoria', label: 'Auditoría', roles: ['ADMIN', 'PROFESIONAL'] });
   });
 });

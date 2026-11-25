@@ -1,4 +1,4 @@
-import { decodePaciente, decodePagina } from './decoders';
+import { decodePaciente, paginaOf } from './decoders';
 import type { HttpClient } from './http';
 import { conId, conQuery } from './rutas';
 import type { FiltroPacientes, Pagina, Paciente } from './types';
@@ -21,7 +21,7 @@ export function createPacientesApi(http: HttpClient): PacientesApi {
         page: filtro.page === undefined ? undefined : String(filtro.page),
         size: filtro.size === undefined ? undefined : String(filtro.size),
       });
-      return http.request('GET', path, { decode: decodePagina(decodePaciente) });
+      return http.request('GET', path, { decode: paginaOf(decodePaciente) });
     },
     async obtener(id) {
       return http.request('GET', conId('/pacientes', id), { decode: decodePaciente });

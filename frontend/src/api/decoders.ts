@@ -1,11 +1,15 @@
 import { ApiError } from './errors';
 import { esInstanteIso } from './instante';
 import {
+  ACCIONES_AUDITORIA,
   ESTADOS_TURNO,
   ROLES,
+  type AccionAuditoria,
   type Bloqueo,
   type DiaSemana,
+  type EntradaAuditoria,
   type EstadoTurno,
+  type ExportPaciente,
   type Horario,
   type LoginResponse,
   type MeResponse,
@@ -16,6 +20,7 @@ import {
   type Rol,
   type Sillon,
   type Turno,
+  type ValorDetalle,
 } from './types';
 
 /** Decodificadores de respuestas: narrowing de `unknown`, sin `as` sobre JSON crudo (regla 4). */
@@ -191,7 +196,8 @@ function fechaOrNull(o: Obj, key: string): string | null {
   return v;
 }
 
-function entero(o: Obj, key: string): number {
+/** Entero seguro y no negativo (paginación, conteos). */
+function nonNegativeInt(o: Obj, key: string): number {
   const v = o[key];
   if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < 0) fail();
   return v;
@@ -214,16 +220,59 @@ export function decodePaciente(value: unknown): Paciente {
   };
 }
 
+/* Auditoría (C-06) y export (C-15). */
+
+function accionAuditoria(o: Obj, key: string): AccionAuditoria {
+  const v = o[key];
+  const found = ACCIONES_AUDITORIA.find((a) => a === v);
+  if (found === undefined) fail();
+  return found;
+}
+
+/** Objeto JSON plano con valores escalares, o `null`. */
+function detalle(o: Obj, key: string): Readonly<Record<string, ValorDetalle>> | null {
+  const v = o[key];
+  if (v === null || v === undefined) return null;
+  const d = obj(v);
+  const result: Record<string, ValorDetalle> = {};
+  for (const [k, valor] of Object.entries(d)) {
+    if (typeof valor !== 'string' && typeof valor !== 'boolean' && (typeof valor !== 'number' || !Number.isFinite(valor))) fail();
+    result[k] = valor;
+  }
+  return result;
+}
+
+export function decodeEntradaAuditoria(value: unknown): EntradaAuditoria {
+  const o = obj(value);
+  return {
+    id: id(o, 'id'),
+    fecha: instant(o, 'fecha'),
+    usuarioId: idOrNull(o, 'usuarioId'),
+    accion: accionAuditoria(o, 'accion'),
+    entidad: str(o, 'entidad', { nonEmpty: true }),
+    entidadId: idOrNull(o, 'entidadId'),
+    detalle: detalle(o, 'detalle'),
+    ip: strOrNull(o, 'ip'),
+  };
+}
+
 /** Página del backend (`common/web/Pagina`): `{contenido, pagina, tamanio, totalElementos, totalPaginas}`. */
-export function decodePagina<T>(decode: (value: unknown) => T): (value: unknown) => Pagina<T> {
+export function paginaOf<T>(decode: (value: unknown) => T): (value: unknown) => Pagina<T> {
   return (value) => {
     const o = obj(value);
     return {
       contenido: listOf(decode)(o['contenido']),
-      pagina: entero(o, 'pagina'),
-      tamanio: entero(o, 'tamanio'),
-      totalElementos: entero(o, 'totalElementos'),
-      totalPaginas: entero(o, 'totalPaginas'),
+      pagina: nonNegativeInt(o, 'pagina'),
+      tamanio: nonNegativeInt(o, 'tamanio'),
+      totalElementos: nonNegativeInt(o, 'totalElementos'),
+      totalPaginas: nonNegativeInt(o, 'totalPaginas'),
     };
   };
+}
+
+/** Solo valida la forma mínima (objeto con `paciente`); el contenido se descarga sin interpretar. */
+export function decodeExportPaciente(value: unknown): ExportPaciente {
+  const o = obj(value);
+  obj(o['paciente']);
+  return o;
 }
