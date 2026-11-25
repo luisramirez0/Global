@@ -56,4 +56,4 @@
 ## 10. Cierre
 
 - [x] 10.1 Handoff `knowledge-base/entrega/C-15.md` (incluye la corrección del contrato de C-08 y el contrato del componente para C-12); `CHANGES.md` §C-15 `[x]` con evidencia.
-- [ ] 10.2 Commit en Conventional Commits y PR con la plantilla, avisando a integrante-1/2 (regla 12) — solo con autorización de la persona.
+- [x] 10.2 (PR #19, merge `7abd7e3`, commit `d06f8bf`; review de integrante-1/2 pendiente) Commit en Conventional Commits y PR con la plantilla, avisando a integrante-1/2 (regla 12) — solo con autorización de la persona.
