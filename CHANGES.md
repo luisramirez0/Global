@@ -341,7 +341,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/07_flujos_principales.md` §Flujo 5
 
 ### [C-13] `frontend-agenda`
-- **Estado**: `[ ]` implementado, pendiente de verificación manual (task 8.5) — evidencia técnica: `npm test` 1212/1212 en 57 archivos (línea base 393), lint/typecheck limpios, `openspec validate --strict` OK, sin cambios en `backend/` ni dependencias. Handoff: `knowledge-base/entrega/C-13.md`
+- **Estado**: `[ ]` implementado, mergeado en PR #20 (merge `ea88864`) y archivado en `openspec/changes/archive/2026-11-25-c-13-frontend-agenda` (specs sincronizadas: nueva `frontend-agenda`; modificadas `frontend-api-client` y `frontend-shell`); **pendiente de verificación manual (task 8.5)** — evidencia técnica: `npm test` 1212/1212 en 57 archivos (línea base 393), lint/typecheck limpios, `openspec validate --strict` OK, sin cambios en `backend/` ni dependencias. Handoff: `knowledge-base/entrega/C-13.md`
 - **Resultado**: vista diaria/semanal por sillón con colores por estado; crear, mover, cancelar y confirmar turnos con feedback de conflictos.
 - **Scope**:
   - `src/pages/agenda/` (grilla diaria/semanal, filtro por sillón, color por estado), modal de turno (paciente, prestación, sillón, horario), manejo de 409/422, sobreturno explícito con confirmación.
