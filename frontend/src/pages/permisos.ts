@@ -13,3 +13,11 @@ export function rolActual(ctx: PageContext): Rol | null {
 export function puedeDarDeBaja(rol: Rol | null): boolean {
   return rol === 'ADMIN' || rol === 'PROFESIONAL';
 }
+
+/**
+ * Historia clínica (C-12b, D2; `GESTION` en el backend, supuesto PA-07): RECEPCION no. Sin este permiso la página de
+ * ficha no hace ninguna request.
+ */
+export function puedeVerFicha(rol: Rol | null): boolean {
+  return rol === 'ADMIN' || rol === 'PROFESIONAL';
+}
