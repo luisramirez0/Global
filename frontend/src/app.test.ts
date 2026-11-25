@@ -263,3 +263,41 @@ describe('ficha no registrada en C-12a (tasks 3.4; la reemplaza C-12b)', () => {
     },
   );
 });
+
+describe('pacientes: cuerpos de error del servidor con contenido malicioso (C-12a, tasks 6a)', () => {
+  const PAYLOAD = '<img src=x onerror=alert(1)><script>alert(2)</script>';
+
+  it.each([
+    [400, { title: PAYLOAD, detail: PAYLOAD, errores: [{ campo: 'nombre', mensaje: PAYLOAD }] }],
+    [409, { title: PAYLOAD, detail: PAYLOAD, pacienteId: 3, codigo: 'DNI_DUPLICADO' }],
+    [409, { title: PAYLOAD, detail: PAYLOAD, codigo: '<b>X</b>' }],
+    [500, { title: PAYLOAD, detail: PAYLOAD }],
+  ])('alta que responde %i: title y detail no se muestran y no se crean nodos', async (status, cuerpo) => {
+    storeSession();
+    window.history.replaceState(null, '', '#/pacientes/nuevo');
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(200, ME_OK))
+      .mockResolvedValueOnce(problemResponse(status, cuerpo));
+    await mount(fetchFn).ready;
+    const form = main().querySelector('form');
+    if (form === null) throw new Error('sin formulario');
+    for (const [name, value] of Object.entries({ nombre: 'Ana', apellido: 'Pérez', dni: '30111222' })) {
+      const el = form.querySelector(`input[name="${name}"]`);
+      if (el instanceof HTMLInputElement) el.value = value;
+    }
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(2));
+    // Espera el aviso: en la alerta general o, en el DNI duplicado, en el error del campo.
+    await vi.waitFor(() => {
+      const general = main().querySelector('[role="alert"]')?.textContent ?? '';
+      const campo = main().querySelector('.error-campo:not(:empty)')?.textContent ?? '';
+      expect(`${general}${campo}`).not.toBe('');
+    });
+    const texto = main().textContent ?? '';
+    // El title y el detail nunca se muestran; solo el mensaje por campo del 400 aparece, como texto literal.
+    if (status !== 400) expect(texto).not.toContain('alert(');
+    expect(document.querySelector('main img, main script')).toBeNull();
+    expect(texto).not.toContain('<b>X</b>');
+  });
+});
