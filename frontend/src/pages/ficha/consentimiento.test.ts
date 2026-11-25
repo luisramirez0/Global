@@ -140,6 +140,23 @@ describe('sin consentimiento (bloqueo, D4)', () => {
     expect(ctx.ficha.obtenerFicha).not.toHaveBeenCalled();
   });
 
+  it('tras el 400, el nuevo registro manda la versión nueva del texto (v2)', async () => {
+    const ctx = contextoFicha({ consentimientos: [] });
+    ctx.ficha.registrarConsentimiento
+      .mockRejectedValueOnce(new ApiError('validation', { status: 400 }))
+      .mockResolvedValueOnce({ ...CONSENTIMIENTO_V1, versionTexto: 'v2' });
+    ctx.ficha.textoVigente.mockResolvedValueOnce(TEXTO_V1).mockResolvedValueOnce({ ...TEXTO_V1, version: 'v2' });
+    const { root } = await montar({ consentimientos: [] }, ctx);
+    casilla(root).click();
+    enviar(formConsentimiento(root));
+    await flush();
+    casilla(root).click();
+    enviar(formConsentimiento(root));
+    await flush();
+    expect(ctx.ficha.registrarConsentimiento.mock.calls.map((c) => c[1])).toEqual(['v1', 'v2']);
+    expect(seccion(root, 'Anamnesis')).not.toBeNull();
+  });
+
   it('sin texto vigente (404) avisa y no ofrece la casilla', async () => {
     const ctx = contextoFicha({ consentimientos: [] });
     ctx.ficha.textoVigente.mockRejectedValue(new ApiError('unexpected', { status: 404 }));

@@ -161,7 +161,7 @@
 - [x] 5.0 (681/681 en 32 archivos, lint y typecheck limpios, sobre `bef5bb4`) Línea base de C-12b: `npm test`, lint y typecheck en verde sobre C-12a.
 - [x] 5.1 (36 tests; RED por módulo inexistente, ejecutado) RED: `api/ficha.test.ts`, las 7 operaciones (ruta, cuerpo, query de notas) y sus decodificadores (`embarazo` booleano o `null`, ficha vacía, `Pagina<Nota>`, `Instant` ISO). GREEN: `api/ficha.ts`, decodificadores, tipos y fixtures `api/__fixtures__/ficha.ts`. `PageContext.ficha` en `app.ts` y `FichaMock` en `test-support/pages.ts`.
 - [x] 5.2 (22 tests de validación + 4 de `puedeVerFicha`; RED ejecutado. En blanco → `null` sin recortar, como `FichaMapper.texto`) RED: `pages/ficha/validacion.test.ts`: largos 4000 y 10000; nota en blanco; casilla de consentimiento obligatoria. GREEN. RED en `pages/permisos.test.ts`: `puedeVerFicha` para los 3 roles y sin perfil. GREEN.
-- [x] 5.3 (22 tests en `pages/ficha/consentimiento.test.ts`. RED real contra un esqueleto mínimo de `ficha.ts`: 16/16 fallaban por comportamiento, no por el import. Fechas independientes de la zona de la máquina: 6 casos con `process.env.TZ` en 5 zonas y un consentimiento nocturno, más corridas con `TZ` Tokio, Los Ángeles y UTC. Mutación hecha, ver nota. Anamnesis y notas entran como vistas de solo lectura; 5.4 y 5.5 agregan los formularios) RED: `pages/ficha/ficha.test.ts`, **consentimiento** (D4):
+- [x] 5.3 (23 tests en `pages/ficha/consentimiento.test.ts`. RED real contra un esqueleto mínimo de `ficha.ts`: 16/16 fallaban por comportamiento, no por el import. Fechas independientes de la zona de la máquina: 6 casos con `process.env.TZ` en 5 zonas y un consentimiento nocturno, más corridas con `TZ` Tokio, Los Ángeles y UTC. Mutación hecha, ver nota. Anamnesis y notas entran como vistas de solo lectura; 5.4 y 5.5 agregan los formularios) RED: `pages/ficha/ficha.test.ts`, **consentimiento** (D4):
   - Sin consentimiento: texto literal y casilla; sin anamnesis ni notas en el DOM; sin `GET /ficha` ni `GET /notas`.
   - Registrar sin casilla → sin request.
   - Registro exitoso con la versión del servidor → carga ficha y notas.
@@ -173,6 +173,12 @@
 > **Nota de mutación (5.3, 2026-11-25).** Sobre `ficha.ts`, sin commitear, restaurado desde una copia en memoria:
 > - **M1, sin el chequeo inicial** (carga ficha y notas aunque no haya consentimiento): fallan 9 tests. Entre ellos, `muestra el texto vigente…; anamnesis y notas no existen en el DOM`, `sin texto vigente (404) avisa y no ofrece la casilla` y `un 400…no carga datos clínicos`, que verifican con `sinDatosClinicos` que no existen las secciones ni los campos.
 > - **M2, sin el re-bloqueo ante `409 CONSENTIMIENTO_REQUERIDO`**: fallan los 2 tests de la carrera (`obtenerFicha` y `listarNotas`), que verifican lo mismo.
+> - **M3, sin la validación de la casilla al enviar**: falla `enviar sin la casilla no hace la request y marca el error`. Es el único camino posible, porque el botón está deshabilitado sin la casilla.
+> - **M4, versión fija `'v1'` en vez de la del servidor**: fallan 2 tests. Uno es `la versión enviada es la del texto recibido, aunque sea otra que v1`. El otro, `tras el 400, el nuevo registro manda la versión nueva del texto (v2)`, se agregó para que lo detecten dos tests.
+>
+> Los cuatro mutantes mueren. `ficha.ts` se restauró desde el commit (`git diff` vacío).
+>
+> **Orden acordado (2026-11-25):** `/pacientes/:id/ficha` se registra recién en 5.9, después de que pase la 5.7 (RECEPCION sin requests). Hasta entonces siguen vigentes los tests de C-12a 3.4 (`app.test.ts`, `routes.test.ts`) y 4.4 (`lista.test.ts`).
 
 - [ ] 5.4 RED: **anamnesis** (D5, A-D5):
   - Primera carga con `version: null` y blancos → `null`.
