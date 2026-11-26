@@ -1,14 +1,14 @@
 # Discovery: sistemas odontológicos de gestión de turnos y agenda (Argentina / LATAM)
 
-Fecha de consulta de todas las fuentes: 2026-11-23. Insumo: `docs/consigna.txt`. Notas por competidor (esquema fijo de `web-scraper`) en `discovery/sources/`.
+Fecha de consulta declarada: 2026-11-23. Revisión puntual asistida por IA: 2026-11-26; comprobación personal del equipo pendiente. Insumo: `docs/consigna.txt`. Notas por competidor (esquema fijo de `web-scraper`) en `discovery/sources/`.
 
 ## Metodología y criterios de evidencia
 
 - Solo se relevaron fuentes accesibles por WebFetch/WebSearch: sitios oficiales, páginas de precios, centros de ayuda, ficha de marketplaces y notas de prensa. Capterra y GetApp devolvieron HTTP 403 y solo se usaron como referencia de buscador (no como evidencia de funciones).
-- **Comprobado** = la función o dato figura en la página oficial del proveedor (o en su ayuda), aunque siga siendo una descripción del propio proveedor; no implica haber usado el producto. **Afirmación comercial** = cifra o promesa de resultado del proveedor (clientes, "hasta 85 % menos ausencias", "el mejor") o dato publicado por un competidor en su blog. **No evidenciado** = no aparece en las fuentes consultadas; no equivale a "no existe".
+- **Comprobado** = existe evidencia funcional en documentación, imágenes o demostraciones oficiales; no implica haber usado el producto. Las etiquetas originales requieren validación cuando solo hay publicidad. **Afirmación comercial** = cifra o promesa de resultado del proveedor (clientes, "hasta 85 % menos ausencias", "el mejor") o dato publicado por un competidor en su blog. **No evidenciado** = no aparece en las fuentes consultadas; no equivale a "no existe".
 - Ningún sistema fue probado en demo. Todas las puntuaciones de la sección B son estimaciones sobre evidencia pública y deben validarse con demos.
 - Sesgo declarado: los blogs de Odonthia y Docfav comparan productos propios con ajenos; se usaron solo como pista de candidatos y, cuando se citan, se rotulan como "según competidor".
-- Los precios en pesos están sujetos a inflación y cambian con frecuencia; son los vistos el 2026-11-23.
+- Los precios en pesos están sujetos a inflación y cambian con frecuencia; corresponden al relevamiento declarado del 2026-11-23, salvo las actualizaciones indicadas del 2026-11-26.
 - Candidatos mencionados solo en blogs de competidores y sin sitio oficial localizable (DentalTec, Odonto.ar) no se incluyen en las tablas. Bilog se incluye con evidencia indirecta, sin puntuar.
 
 ## A. Tabla comparativa (ordenada por relevancia para Argentina)
@@ -17,10 +17,10 @@ Leyenda: SI = comprobado en fuente oficial; AC = afirmación comercial; NE = No 
 
 | # | Sistema (proveedor, país) | URL oficial | Segmento / modalidad | Agenda y turnos digitales | Automatización | Clínica | Administración / integraciones locales | Seguridad | Precio publicado | Adopción |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | DentalSoft (Argentina) | https://dentalsoft.com.ar/ | Consultorio/clínica; S | SI: diaria/semanal/mensual, bloqueos, urgencias, multi-profesional y sucursal, Google Calendar; reserva online 24/7 (Pro) | WhatsApp manual (Gestión) / automático (Pro, Meta cobra); email automático. Lista de espera NE | SI odontograma FDI 18 estados; periodontograma NE; imágenes 5-10 GB; presupuestos | SI caja, Mercado Pago (Pro), liquidación de obras sociales; ARCA NE | Roles, backup y exportación (SI); cifrado NE | Gratis (3 meses, 50 turnos); $30.000; $60.000 (moneda sin código) | AC "11 reseñas Google 5,0"; "300 clínicas" solo según competidor |
-| 2 | Odonthia (Genera Impacto, Argentina) | https://odonthia.com/ | Consultorio; S | SI agenda, reserva online, sincronización de calendario | WhatsApp automático en planes pagos; resto NE | SI odontograma FDI (temporales), periodontograma, firma electrónica, portal paciente | Caja, presupuestos, obras sociales mencionadas; facturación NE | SI registro de actividad, exportación, respaldo | Gratis sin vencimiento; $78.700 y $162.500 ARS/mes con IVA (US$47/97 fuera de AR) | AC 4.735 consultorios en 22 países (registrados, no activos) |
-| 3 | DentalCore (La Plata, Argentina) | https://dentalcore.app/ | Consultorio/clínica; S | SI multi-doctor, sala de espera, portal sin instalación | SI confirmación WhatsApp (API oficial Meta)/email/SMS, recall por segmentos, recuperación de tratamientos | SI odontograma, periodontograma, módulos por especialidad, 22 consentimientos | SI Mercado Pago, ARCA, liquidación de 65 obras sociales, caja, FHIR | SI TLS, AES-256 en backups, 2FA, auditoría; ISO 27001 "sigue controles", NO certificado | $75.000 ARS/mes (2 usuarios) +$15.000 por usuario; FAQ dice USD 50 (inconsistente); prueba 7 días | NE (sin clientes ni casos) |
-| 4 | AgendaPro (Chile/México; sitio AR) | https://agendapro.com/ar/dental/software-odontologico | Consultorio/clínica y otras verticales; S + apps | SI turnos 24/7 por odontólogo/práctica/sillón, Google Calendar, Google Maps | SI recordatorios WhatsApp/SMS/email; IA en WhatsApp, Instagram, Messenger; campañas | SI odontograma digital, ficha, consentimiento, recetas, presupuestos; periodontograma NE | Mercado Pago (seña/cuotas) SI; obras sociales y ARCA NE | Cifrado y backups (declarado); cita Leyes 25.326 y 26.529 | Desde $13.900 ARS/mes; prueba 14 días | AC "+30.000" clínicas / "135.000" profesionales (inconsistentes) |
+| 1 | DentalSoft (Argentina) | https://dentalsoft.com.ar/ | Consultorio/clínica; S | SI: diaria/semanal/mensual, bloqueos, urgencias, multi-profesional y sucursal, Google Calendar; reserva online 24/7 (Pro) | WhatsApp manual (Gestión) / automático (Pro, USD 0,026 por mensaje según proveedor, revisión 26/11); email automático. Lista de espera NE | SI odontograma FDI 18 estados; periodontograma NE; imágenes 5-10 GB; presupuestos | SI caja, Mercado Pago (Pro), liquidación de obras sociales; ARCA NE | Roles, backup y exportación (SI); cifrado NE | Gratis (3 meses, 50 turnos); $30.000; $60.000 (moneda sin código) | AC "11 reseñas Google 5,0"; "300 clínicas" según competidor, no verificado |
+| 2 | Odonthia (Genera Impacto, Argentina) | https://odonthia.com/ | Consultorio; S | SI agenda, reserva online, sincronización de calendario | WhatsApp automático en planes pagos; resto NE | SI odontograma FDI (temporales), periodontograma, firma electrónica (no firma digital certificada), portal paciente | Caja, presupuestos, obras sociales mencionadas; facturación NE | SI registro de actividad, exportación, respaldo | Gratis sin vencimiento; Pro $165.900 ARS/mes con IVA (USD 97 fuera de AR), actualizado 26/11 | AC 4.962 consultorios registrados (no necesariamente activos), actualizado 26/11 |
+| 3 | DentalCore (La Plata, Argentina) | https://dentalcore.app/ | Consultorio/clínica; S | SI multi-doctor, sala de espera, portal sin instalación | SI confirmación WhatsApp (API oficial Meta)/email/SMS, recall por segmentos, recuperación de tratamientos | SI odontograma, periodontograma y módulos por especialidad (muestras del sitio) | AC Mercado Pago, ARCA, FHIR; cifras de obras sociales NE en revisión del 26/11 | AC cifrado de datos y backups, 2FA; ISO 27001 y auditoría NE en revisión del 26/11 | $75.000 ARS/mes (2 usuarios); promoción $52.500 por 3 meses; extra USD 10/mes por usuario; prueba 7 días (actualizado 26/11) | NE (sin clientes ni casos) |
+| 4 | AgendaPro (Chile/México; sitio AR) | https://agendapro.com/ar/dental/software-odontologico | Consultorio/clínica y otras verticales; S + apps | SI turnos 24/7 por odontólogo/práctica/sillón, Google Calendar, Google Maps | SI recordatorios WhatsApp/SMS/email; IA en WhatsApp, Instagram, Messenger; campañas | SI odontograma digital, ficha, consentimiento, recetas, presupuestos; periodontograma NE | Mercado Pago (seña/cuotas) SI; obras sociales y ARCA NE | Cifrado y backups (declarado); cita Leyes 25.326 y 26.529 | Desde $13.900 ARS/mes; prueba 14 días | AC "+30.000" clínicas / "135.000" profesionales (distintas métricas) |
 | 5 | ClinIA / OdontoClinIA (Emprinet, Argentina) | https://www.clinia.com.ar/odontologia | Consultorio a hospital/cadena; S | SI agenda por profesional/consultorio; IA para pedir turno por WhatsApp | Recordatorios WhatsApp/email | SI odontograma 52 piezas versionado, HC CIE-10 | SI ARCA, PUCO (cobertura), caja con arqueo, receta electrónica ReNaPDiS (solo recetario) | Backups cada 10 min, acceso controlado | No publicado; demo 45 min | NE |
 | 6 | Dentalink (Chile; módulo Argentina) | https://web-es.softwaredentalink.com/ | Consultorio/clínica; S | SI WhatsApp, reserva por redes, Contact Center IA | SI confirmaciones/recordatorios WhatsApp y email | SI odontograma y periodontograma, presupuestos | Ayuda oficial: obras sociales, conciliaciones, receta electrónica AR; ARCA NE | RGPD y "trazabilidad" (AC); ISO NE en sitio oficial | Cotización; USD 35/50/75 solo según competidor | AC "+15.000 clientes" |
 | 7 | Docfav (Argentina) | https://pro.docfav.com/es-ar | Consultorio generalista; S | SI agenda y portal de reserva/confirmación/cancelación | SI recordatorios WhatsApp y email | Odontograma NE; firma electrónica SI | Cobros SI; obras sociales y facturación NE | Cifrado, servidores UE, declara Ley 25.326 (AC) | USD (blog propio: 19 + 7 por profesional); prueba 100 turnos o 30 días | NE |
@@ -35,7 +35,7 @@ Leyenda: SI = comprobado en fuente oficial; AC = afirmación comercial; NE = No 
 | 16 | Dentidesk (Chile) | https://dentidesk.com (solo dominio vía terceros; no accedido) | Clínicas; S + app iPad | Agenda (terceros) | NE | Odontograma (TrustRadius) | NE | NE | No publicado | NE |
 | 17 | Clinic Cloud / Doctoralia (España) | https://www.clinic-cloud.com/ | Consultorios; S | SI agenda, reserva vía Doctoralia | SI WhatsApp, SMS, email | Odontograma NE | Facturación España (Verifactu); sin AR | RGPD declarado | No publicado; prueba gratis | AC "+12.000 doctores" |
 | 18 | Odontonet (España) | https://www.softwaredoit.es/odontonet/odontonet.html (directorio de terceros) | Clínicas; nube/local | Agenda, sala de espera | SMS | SI odontograma 3D y periodontograma (descripción de directorio) | Sin AR | NE | No publicado | 1 reseña de 2/5 (2024) |
-| 19 | Open Dental (EE. UU.) | https://www.opendental.com/ | Clínicas; despliegue NE | Web Sched | Texting y mensajes automáticos | Periodontograma NE en la página | Sin AR | NE | Sin cifras | Capterra UK 4,6 (88 reseñas, vía buscador; no verificado) |
+| 19 | Open Dental (EE. UU.) | https://www.opendental.com/ | Clínicas; despliegue NE | Web Sched; Web Sched ASAP (lista de espera con envío iniciado por operador) | Texting y mensajes automáticos | Periodontograma NE en la página | Sin AR | NE | Precios publicados en sección oficial de tarifas (26/11) | Reseñas externas no verificadas |
 
 Observación: Doctoralia Pro (Docplanner) figura en Argentina según un listado de terceros; no se accedió a un sitio oficial argentino, por lo que no se puntúa por separado.
 
@@ -47,7 +47,7 @@ Pesos: Turnos y automatización 25 %, Clínica 20 %, Integraciones locales y Wha
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | DentalCore | 4 | 5 | 4.5 | 4.5 | 4 | 4.5 | 3 | **4.35** |
 | 2 | Dentalink | 4 | 4.5 | 3.5 | 4 | 3.5 | 3.5 | 2.5 | **3.85** |
-| 3 | AgendaPro | 4.5 | 3 | 4 | 3 | 4.5 | 3.5 | 4 | **3.77** |
+| 3 | AgendaPro | 4.5 | 3 | 4 | 3 | 4.5 | 3.5 | 4 | **3.78** |
 | 4 | DentalSoft | 4.5 | 3.5 | 3 | 3.5 | 4 | 3 | 4.5 | **3.73** |
 | 5 | ClinIA / OdontoClinIA | 3.5 | 4 | 4 | 4 | 2.5 | 3.5 | 2 | **3.58** |
 | 6 | Odonthia | 3.5 | 4 | 2.5 | 2.5 | 3.5 | 3.5 | 5 | **3.38** |
@@ -56,7 +56,7 @@ Pesos: Turnos y automatización 25 %, Clínica 20 %, Integraciones locales y Wha
 | 9 | Clinic Cloud | 4 | 2 | 2 | 2 | 4 | 3.5 | 2.5 | **2.88** |
 | 10 | Medesk | 3 | 3.5 | 1.5 | 3 | 2.5 | 3 | 3 | **2.83** |
 | 11 | Open Dental | 3 | 3 | 2 | 3 | 2.5 | 1.5 | 3 | **2.65** |
-| 12 | Odontonet | 3 | 4 | 0.5 | 3 | 2 | 1.5 | 2 | **2.52** |
+| 12 | Odontonet | 3 | 4 | 0.5 | 3 | 2 | 1.5 | 2 | **2.53** |
 | 13 | YoFacturo | 2.5 | 0.5 | 3.5 | 4 | 1 | 3.5 | 3.5 | **2.48** |
 | 14 | OdontoGRAMA | 2.5 | 3 | 0.5 | 3.5 | 1 | 1.5 | 4.5 | **2.30** |
 | 15 | Nimbo | 2.5 | 3.5 | 1 | 1.5 | 1.5 | 2.5 | 4 | **2.30** |
@@ -88,9 +88,9 @@ Bilog no se puntúa (sin fuente oficial). Advertencia crítica: el liderazgo de 
 - Interoperabilidad (HL7 FHIR): DentalCore, ClinIA.
 
 ### C.3 Vacíos frecuentes en el mercado argentino
-1. Ningún sistema evidencia la combinación completa "turnero online con sillón/box + lista de espera + seña Mercado Pago + facturación ARCA + obras sociales" a precio de consultorio. La lista de espera no figura (No evidenciado) en ninguno de los sistemas relevados.
+1. Ningún sistema evidencia la combinación completa "turnero online con sillón/box + lista de espera + seña Mercado Pago + facturación ARCA + obras sociales" a precio de consultorio. Open Dental documenta Web Sched ASAP, con envío iniciado por el operador; no se comprobó la reasignación íntegramente automática.
 2. Obras sociales: la gestión real (nomencladores actualizados, autorizaciones, rechazos, formatos de liquidación) está mal documentada públicamente. Las guías del sector advierten que los cambios de requisitos generan rechazos de facturación, pero ningún proveedor publica frecuencia de actualización de nomencladores ni formatos soportados.
-3. Cumplimiento normativo: casi todos "mencionan" la Ley 25.326 o 26.529 sin documentación pública verificable (DPA, registro ante AAIP, política de retención de la HC, ubicación de datos). Docfav declara servidores en la UE; DentalCore aclara que no está certificado ISO 27001. La firma electrónica se ofrece sin aclarar su validez en la HC (Odonthia aclara que no es firma digital).
+3. Cumplimiento normativo: casi todos "mencionan" la Ley 25.326 o 26.529 sin documentación pública verificable (DPA, registro ante AAIP, política de retención de la HC, ubicación de datos). Docfav declara servidores en la UE; La referencia a ISO 27001 de DentalCore no quedó evidenciada en la revisión del 26/11; no se infiere ausencia de certificación. La firma electrónica se ofrece sin aclarar su validez en la HC (Odonthia aclara que no es firma digital).
 4. Seguimiento de ausentes y recuperación: pocas funciones evidenciadas con métricas; las cifras de reducción de ausentismo son afirmaciones comerciales.
 5. Precios en USD o por cotización dificultan la planificación en un contexto de inflación; los precios en ARS publicados cambian rápido y varían entre página y blog del mismo proveedor.
 6. Portabilidad y salida: exportación evidenciada solo en DentalSoft, Odonthia, DentalCore (PDF/FHIR), Dentalink (parcial) y Doctocliq (a pedido); la migración desde otro sistema se promete poco.
@@ -211,7 +211,20 @@ WhatsApp Business API (Meta, con costo por mensaje), Mercado Pago, Google Calend
 10. Localizar fuentes oficiales de Bilog, DentalTec, Odonto.ar y Dentidesk.
 11. Confirmar con asesoría legal plazos de conservación de la HC y validez de la firma electrónica en consentimientos.
 
-## Fuentes (todas consultadas el 2026-11-23)
+## Verificación de fuentes (revisión puntual asistida por IA, 2026-11-26)
+
+La comprobación personal por los integrantes y la validación histórica de la consulta del 23/11 quedan pendientes.
+
+| Fuente | Qué afirmaba el relevamiento | Resultado de la revisión | Corrección aplicada |
+|---|---|---|---|
+| DentalCore | $75.000 ARS/mes y $15.000 por usuario extra; ISO 27001 | Precio regular $75.000, promoción $52.500 por tres meses; FAQ USD 10 por usuario extra; ISO no confirmado | Actualizar precios y marcar ISO como NE |
+| Odonthia | 4.735 consultorios en 22 países y firma electrónica | 4.962 cuentas registradas, Pro $165.900; firma electrónica | Actualizar cifras y distinguir registro de clientes activos y firma digital certificada |
+| AgendaPro | 30.000 clínicas y 135.000 profesionales; leyes 25.326 y 26.529 | Son métricas diferentes; la mención normativa no demuestra cumplimiento auditado | Eliminar supuesta contradicción y mantener AC |
+| Dentalink | Obras sociales, receta electrónica AR y ARCA | Centro de ayuda documenta obras sociales, conciliaciones y receta electrónica; ARCA NE | Mantener ARCA como NE y precios de terceros como tales |
+| DentalSoft | 300 clínicas y WhatsApp automático incluido | Gestión manual, Pro automático; USD 0,026 por mensaje; 300 clínicas no confirmado | Distinguir modalidades y cifra de terceros no verificada |
+| Ámbito / Órbita | IA para turnos médicos por WhatsApp | Nota sobre asistente generalista en prueba en La Plata; módulos odontológicos no evidenciados | Mantener como referencia periodística, no documentación clínica |
+
+## Fuentes (consulta declarada 2026-11-23; revisión puntual 2026-11-26)
 
 Oficiales y de ayuda:
 - https://dentalsoft.com.ar/
@@ -230,6 +243,8 @@ Oficiales y de ayuda:
 - https://www.medesk.net/es/solutiones/odontologia
 - https://www.clinic-cloud.com/
 - https://www.opendental.com/
+- https://www.opendental.com/manual/webschedasap.html (revisión 2026-11-26)
+- https://www.opendental.com/site/fees.html (revisión 2026-11-26)
 
 Terceros (no oficiales; tratar como afirmación):
 - Odonthia, comparativa (proveedor con interés comercial): https://odonthia.com/blog/mejores-software-odontologicos-argentina-2026
