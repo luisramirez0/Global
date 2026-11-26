@@ -24,11 +24,20 @@ La API SHALL permitir solicitudes cross-origin únicamente desde los orígenes l
 - **THEN** la respuesta incluye `Access-Control-Allow-Origin: http://127.0.0.1:5173`
 
 ### Requirement: Métodos y encabezados CORS permitidos
-La política CORS SHALL permitir los métodos `GET, POST, PUT, PATCH, DELETE, OPTIONS` y los encabezados `Authorization` y `Content-Type`, para que el frontend pueda enviar el token que incorpora C-03.
+La política CORS SHALL permitir los métodos `GET, POST, PUT, PATCH, DELETE, OPTIONS` y los encabezados `Authorization` y `Content-Type`, para que el frontend pueda enviar el token que incorpora C-03. A los orígenes permitidos MUST exponerles el encabezado `Retry-After` (y solo ese), para que la SPA pueda leer la espera del `429` de login.
 
 #### Scenario: Preflight con encabezado Authorization
 - **WHEN** un origen permitido envía un preflight con `Access-Control-Request-Headers: authorization,content-type`
 - **THEN** la respuesta autoriza ambos encabezados
+
+#### Scenario: Retry-After legible desde otro origen
+- **GIVEN** la SPA en `http://localhost:5173` y la API en otro origen
+- **WHEN** el login responde `429` con `Retry-After` a una solicitud con `Origin: http://localhost:5173`
+- **THEN** la respuesta incluye `Access-Control-Expose-Headers: Retry-After`
+
+#### Scenario: Origen no permitido sin encabezados expuestos
+- **WHEN** llega una solicitud con `Origin: http://evil.example`
+- **THEN** la respuesta no incluye `Access-Control-Expose-Headers`
 
 ### Requirement: Acceso denegado por defecto
 Toda ruta de la API que no esté declarada explícitamente como pública MUST ser rechazada para solicitudes sin credenciales válidas, y la API MUST ser stateless (sin sesión HTTP). Las rutas públicas son `GET /api/health`, `POST /api/auth/register`, `POST /api/auth/login` y los preflight `OPTIONS`.

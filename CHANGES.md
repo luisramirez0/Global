@@ -392,7 +392,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - `knowledge-base/05_reglas_de_negocio.md` §RN-DS-02, §RN-DS-06
 
 ### [C-16] `entrega-hardening-demo`
-- **Estado**: `[ ]` en curso (2026-11-25), rama `c-16-entrega-hardening-demo`: README, datos demo y smoke E2E por la API (`scripts/*.sh` y `.ps1`), guion, checklist de seguridad, bugs conocidos y verificaciones pendientes en `docs/`; CORS expone `Retry-After`, sin perfil por defecto, MySQL en `127.0.0.1` y headers de seguridad en nginx. **Pendiente**: que la persona levante el stack y corra el seed y el smoke, el ensayo con `docs/verificacion-manual.md` y `openspec validate --strict`. Handoff: `knowledge-base/entrega/C-16.md`
+- **Estado**: `[x]` completado (2026-11-25), mergeado en PR #29 (merge `7071401`; commits `199ebc6` `.gitignore` y `0785fe7`) y archivado en `openspec/changes/archive/2026-11-25-c-16-entrega-hardening-demo` (specs sincronizadas: nueva `delivery-demo`; modificadas `api-cors-policy` y `runtime-configuration`). Evidencia: **smoke E2E 55/55 OK** y `demo-seed` OK, corridos por la persona el 2026-11-25 contra MySQL 8.4 con Docker Desktop en Windows; backend 961/961 (línea base 955; +6: `CorsPolicyIT` y `ProfileDefaultsTest`), frontend 1987/1987, lint y typecheck limpios; sin migraciones ni dependencias nuevas. Entregables: README, `scripts/demo-seed` y `scripts/smoke-e2e` (`.sh` y `.ps1`), `docs/` (guion, checklist de seguridad, bugs conocidos, verificación manual), CORS con `Retry-After`, sin perfil por defecto, MySQL en `127.0.0.1` y headers de seguridad en nginx. **Pendiente**: prueba manual en el navegador (`docs/verificacion-manual.md`), RBAC de RECEPCION con `SMOKE_DB=1` y `openspec validate --strict`; review de integrante-1/2 (regla 12: `CorsConfig` y perfil). Handoff: `knowledge-base/entrega/C-16.md`
 - **Resultado**: `docker compose up` + seed deja una demo reproducible del flujo completo; checklist de seguridad y smoke E2E en verde.
 - **Scope**:
   - Smoke E2E: registro → configurar → paciente + consentimiento → turno (con conflicto 409) → recordatorio wa.me → auditoría/export.
@@ -400,7 +400,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
   - Corrección de bugs de integración; sin features nuevas.
 - **Dependencias**: `C-09, C-11, C-12, C-14, C-15`
 - **Zona**: `docker-compose.yml`, `README.md`, `backend/src/main/resources/` (seed dev), `docs/` (guion de demo), transversal
-- **Responsable**: Integrante 2
+- **Responsable**: pendiente de confirmar con el equipo (en el roadmap figuraba Integrante 2)
 - **Governance**: MEDIO
 - **Leer antes**:
   - `knowledge-base/08_arquitectura_propuesta.md` §Despliegue, §Seguridad
@@ -507,7 +507,7 @@ C-01 → C-02 → C-03 → C-04* → C-07 → C-09 → C-14 → C-16
 | C-13 | frontend-agenda | 3 | MEDIO | Integrante 1 | MVP |
 | C-14 | frontend-recordatorios | 3 | BAJO | Integrante 1 | MVP |
 | C-15 | auditoria-export-ui | 4 | CRITICO | Integrante 3 | MVP |
-| C-16 | entrega-hardening-demo | 4 | MEDIO | Integrante 2 | MVP |
+| C-16 | entrega-hardening-demo | 4 | MEDIO | pendiente de confirmar | MVP |
 | C-17..C-22 | lista-espera, reserva-online-publica, sena-mercadopago, recall-ausentes, clinica-avanzada, obras-sociales-arca | 5 | varios | por asignar | Post |
 
 **Primer item elegible**: `C-01` (`project-setup`).

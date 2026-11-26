@@ -24,8 +24,8 @@
   5 turnos mañana + 1 hoy; RECEPCION opcional (`DEMO_RECEPCION=1`); se detiene con `409`. `bash -n` OK.
 - [x] 1.4 `scripts/lib/api.ps1` + `scripts/demo-seed.ps1` (HttpClient, ASCII puro, `%uXXXX`). Sin errores del parser
   de PowerShell, 0 bytes no ASCII, helpers probados.
-- [ ] 1.5 **Persona**: `docker compose down -v && docker compose up --build -d` y correr `demo-seed` (sh o ps1).
-  Anotar el resultado en `knowledge-base/entrega/C-16.md`.
+- [x] 1.5 **Persona**: `docker compose down -v && docker compose up --build -d` y correr `demo-seed` (sh o ps1).
+  **Hecho por la persona el 2026-11-25, OK**: consultorio y ADMIN creados, 2 sillones, 4 prestaciones, horario 09:00-18:00, bloqueo de 13 a 14 h, 5 pacientes (Ana sin teléfono, Juan sin email, uno con nombre XSS), ficha de María con consentimiento y 6 turnos (5 para mañana y 1 para hoy).
 
 ## 2. P1: smoke E2E
 
@@ -37,8 +37,9 @@
   aislamiento A/B (`404` × 4, auditoría vacía), `401` sin token y con token adulterado; RECEPCION `403` × 3 con
   `SMOKE_DB=1`. Código de salida = fallas. `bash -n` OK.
 - [x] 2.2 `scripts/smoke-e2e.ps1` con los mismos pasos. Sin errores del parser, ASCII puro.
-- [ ] 2.3 **Persona**: correr el smoke (sh y/o ps1, también con `SMOKE_DB=1`) contra el stack de 1.5 y anotar el
-  resultado. Si algún paso falla por el script (no por la app), corregirlo antes de la demo.
+- [x] 2.3 **Persona**: correr el smoke contra el stack de 1.5 y anotar el resultado. **Hecho por la persona el
+  2026-11-25: 55/55 pasos OK**, contra MySQL 8.4 con Docker Desktop en Windows.
+- [ ] 2.4 **Persona**: smoke con `SMOKE_DB=1` (RBAC de RECEPCION: `403` en ficha, export y auditoría). Pendiente.
 
 ## 3. P1: guion y bugs de integración
 
@@ -68,6 +69,17 @@
   `git diff main -- backend/src/main/resources/db frontend/src` vacío.
 - [x] 5.4 `knowledge-base/entrega/C-16.md` y estado de `CHANGES.md` §C-16.
 - [ ] 5.5 **Pendiente (CLI)**: `openspec validate c-16-entrega-hardening-demo --strict`.
-- [ ] 5.6 **Persona**: ensayo de la demo con `docs/verificacion-manual.md`; con todo OK, marcar `[x]` en `CHANGES.md` §C-16.
-- [ ] 5.7 Commit, PR (con aviso a integrante-1/2 por `CorsConfig` y el perfil) y archivo del change: solo con
-  autorización de la persona.
+- [ ] 5.6 **Persona**: prueba manual en el navegador (ensayo de la demo con `docs/demo.md` y
+  `docs/verificacion-manual.md`). Pendiente.
+- [x] 5.7 Commit, PR y archivo del change, con autorización de la persona: commits `199ebc6` (`.gitignore`) y
+  `0785fe7`; PR #29 mergeado en `main` (`7071401`); archivado el 2026-11-25 en la rama `c-16-archive`.
+
+## Archivo (2026-11-25)
+
+- Sincronización manual (sin el CLI de OpenSpec), equivalente a `openspec archive`:
+  - nueva `openspec/specs/delivery-demo/spec.md` (Purpose del delta, sin `TBD`);
+  - en `api-cors-policy` se reemplazó el requisito "Métodos y encabezados CORS permitidos";
+  - en `runtime-configuration` se reemplazaron "Perfiles dev y test" y "Entorno local reproducible".
+  - El resto de los requisitos no cambió.
+- Quedan abiertas: 2.4 (`SMOKE_DB=1`), 5.5 (`openspec validate --strict`)
+  y 5.6 (prueba manual en el navegador).
