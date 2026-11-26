@@ -9,14 +9,73 @@
 # backups del orquestador
 .active-orchestrator-state.json.bak*
 
-# entorno local y artefactos de build (C-01)
+# --- Secretos y entornos locales -------------------------------------------
+# Solo se versionan las plantillas .env.example (sin valores reales).
 .env
+.env.*
 !.env.example
-backend/build/
-backend/.gradle/
-frontend/node_modules/
-frontend/dist/
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+# Configuración local de herramientas (Claude Code y similares)
+.claude/settings.local.json
+
+# --- Dependencias -----------------------------------------------------------
+node_modules/
+vendor/
+.npm/
+.pnpm-store/
+
+# --- Compilados y artefactos de build ----------------------------------------
+# Backend (Gradle / Java)
+build/
+.gradle/
+target/
+out/
+bin/
+*.class
+*.jar
+*.war
+*.ear
+# El wrapper de Gradle SÍ se versiona: lo necesita ./gradlew para bajar la versión fijada.
+!backend/gradle/wrapper/gradle-wrapper.jar
+# Frontend (Vite / TypeScript)
+dist/
+.vite/
+.next/
+*.tsbuildinfo
+# Reportes de tests y cobertura
 coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# --- Logs y temporales --------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+hs_err_pid*
+*.tmp
+*.bak
+*.swp
+*~
+# Salida local del smoke de la demo (docs/demo.md, plan B)
+smoke.txt
+
+# --- IDE / editor / sistema operativo -----------------------------------------
 .idea/
 .vscode/
 *.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.factorypath
+.DS_Store
+Thumbs.db
+desktop.ini
